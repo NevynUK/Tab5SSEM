@@ -14,6 +14,8 @@
 
 #include <M5GFX.h>
 #include "SDCard.hpp"
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 
 /**
  * @brief SSEM emulator display controller.
@@ -33,12 +35,34 @@
 class Display
 {
 public:
+    /** Number of storelines in the SSEM store. */
+    static constexpr int STORELINE_COUNT = 32;
+
     /**
-     * @brief Initialises storage, shows the splash screen, then draws the
-     *        main interface.
+     * @brief Message sent to the Display task via the message queue.
+     *
+     * Holds a complete snapshot of the display state.  The Display task
+     * dequeues one of these each cycle and redraws the storeline area.
+     */
+    struct DisplayMessage
+    {
+        /** Current value of each storeline word. */
+        uint32_t storelineValues[STORELINE_COUNT];
+
+        /** Text label shown beside each storeline. */
+        char storelineText[STORELINE_COUNT][32];
+
+        /** Reserved — always nullptr for now. */
+        void *controlState;
+    };
+
+    /**
+     * @brief Initialises storage, shows the splash screen, draws the main
+     *        interface, then starts the Display FreeRTOS task.
      *
      * Stores the display pointer, zeroes the SSEM store, sets all labels
-     * to "JP 0", delegates to ShowSplash() then ShowMain().
+     * to "JP 0", delegates to ShowSplash() then ShowMain(), creates the
+     * message queue and launches the Display task.
      *
      * @param display  Reference to the global M5GFX instance (already
      *                 initialised with the correct rotation).
@@ -46,6 +70,17 @@ public:
      *                 card is present.
      */
     static void Run(M5GFX &display, SDCard *sdCard);
+
+    /**
+     * @brief Posts a DisplayMessage to the display queue.
+     *
+     * Non-blocking: if the queue is full the message is discarded and false
+     * is returned.
+     *
+     * @param message  The display state snapshot to enqueue.
+     * @return true if the message was accepted; false if the queue was full.
+     */
+    static bool PostMessage(const DisplayMessage &message);
 
 private:
     /**
@@ -137,9 +172,6 @@ private:
     /** Text label shown to the right of each storeline, initially "JP 0". */
     static char _labels[32][32];
 
-    /** Number of storelines in the SSEM store. */
-    static constexpr int STORELINE_COUNT = 32;
-
     /** Number of LEDs per storeline (one per bit). */
     static constexpr int LED_COUNT = 32;
 
@@ -179,4 +211,18 @@ private:
     /** Left margin of the text section in pixels, providing separation between
      *  the LED column and the storeline text. */
     static constexpr int TEXT_LEFT_MARGIN = 16;
+
+    /** FreeRTOS queue handle for receiving DisplayMessage updates. */
+    static QueueHandle_t _queue;
+
+    /**
+     * @brief FreeRTOS task body for the Display task.
+     *
+     * Blocks indefinitely on _queue.  On each message received, copies the
+     * storeline values and text labels into the static members then redraws
+     * all storeline rows and flushes the framebuffer.
+     *
+     * @param parameter  Unused; required by the FreeRTOS task signature.
+     */
+    static void DisplayTask(void *parameter);
 };

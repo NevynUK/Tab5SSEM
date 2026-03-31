@@ -14,6 +14,7 @@
 #include "Touch.hpp"
 #include <cstdio>
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <freertos/task.h>
 
 // ---------------------------------------------------------------------------
@@ -32,6 +33,9 @@ uint32_t Display::_store[Display::STORELINE_COUNT] = {};
 /** @brief Storeline text labels; all initialised to "JP 0" in Run(). */
 char Display::_labels[Display::STORELINE_COUNT][32] = {};
 
+/** @brief FreeRTOS queue handle; created by Run() before the Display task is started. */
+QueueHandle_t Display::_queue = nullptr;
+
 // ---------------------------------------------------------------------------
 // Public methods
 // ---------------------------------------------------------------------------
@@ -48,6 +52,9 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
 
     ShowSplash(sdCard);
     ShowMain();
+
+    _queue = xQueueCreate(4, sizeof(DisplayMessage));
+    xTaskCreate(DisplayTask, "DisplayTask", 8192, nullptr, 5, nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,5 +225,32 @@ void Display::OnSplashTouch(const lgfx::touch_point_t *points, int count)
     if (count > 0)
     {
         _splashDismissed = true;
+    }
+}
+
+bool Display::PostMessage(const DisplayMessage &message)
+{
+    return(xQueueSend(_queue, &message, 0) == pdTRUE);
+}
+
+void Display::DisplayTask(void *parameter)
+{
+    (void) parameter;
+
+    DisplayMessage message;
+
+    while (true)
+    {
+        if (xQueueReceive(_queue, &message, portMAX_DELAY) == pdTRUE)
+        {
+            for (int i = 0; i < STORELINE_COUNT; ++i)
+            {
+                _store[i] = message.storelineValues[i];
+                snprintf(_labels[i], sizeof(_labels[i]), "%s", message.storelineText[i]);
+            }
+
+            DrawAllStorelines();
+            _display->display();
+        }
     }
 }

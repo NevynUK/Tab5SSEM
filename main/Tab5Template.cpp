@@ -11,7 +11,10 @@
  *---------------------------------------------------------------------------*/
 
 #include <M5GFX.h>
+#include <cstdio>
 #include <ctime>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include "Display.hpp"
 #include "Rtc.hpp"
 #include "SDCard.hpp"
@@ -65,8 +68,32 @@ extern "C" void app_main(void)
 {
     Setup();
 
-    // All work is performed by the TouchInput FreeRTOS task.
-    // Deleting this task frees its stack and TCB immediately rather than
-    // keeping a do-nothing loop alive indefinitely.
-    vTaskDelete(nullptr);
+    // Initialise the message with all storelines zeroed and labelled "JP 0".
+    Display::DisplayMessage message = {};
+
+    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+    {
+        message.storelineValues[i] = 0U;
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "JP 0");
+    }
+
+    message.controlState = nullptr;
+    Display::PostMessage(message);
+
+    // Count from 0 upward, setting every storeline to the current count value,
+    // and post a display update every second.
+    uint32_t count = 0U;
+
+    while (true)
+    {
+        for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+        {
+            message.storelineValues[i] = count;
+        }
+
+        Display::PostMessage(message);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        ++count;
+    }
 }

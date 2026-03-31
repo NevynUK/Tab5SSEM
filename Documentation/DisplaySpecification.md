@@ -57,6 +57,20 @@ Initially each line will be set to `JP 0`.
 
 This will initially be blank.
 
-## Code Modifications
+## Display Task
 
-The code controlling the display shall be moved into the file `components/SSEM/Display.cpp`.
+The Display code should run in a FreeRTOS task.  The code should use a message queue to receive the state of the Display.  Create a message definition that will hold
+
+- Storeline values
+- Storeline text
+- Control State (initially a `nullptr`)
+
+The code controlling the messages shall be in the `app_main` function.  This will:
+
+- Set the storelines to 0
+- Set the Storeline text to `JP 0`
+- Set the control state to `nullptr`
+
+The code will loop counting from 0 to UINT_MAX.  Each of the Storelines will be set to the count value.  The code will use `vTaskDelay` to wait for 1 second between each value.
+
+The Display class will receive the message from the message queue and use the data in the message to update the display.
