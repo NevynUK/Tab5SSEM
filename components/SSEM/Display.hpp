@@ -126,8 +126,9 @@ private:
     static void DrawAllStorelines();
 
     /**
-     * @brief Draws one storeline row: 32 LEDs followed by the text label.
+     * @brief Draws one storeline row: index number, 32 LEDs, and the text label.
      *
+     * The storeline index is drawn to the left of the LED box, outside it.
      * Must be called within an active startWrite / endWrite pair on _display.
      *
      * @param lineIndex  Zero-based storeline index (0–31).
@@ -187,8 +188,16 @@ private:
     /** Total pixel width of the LED grid section (LED_CELL_WIDTH × LED_COUNT). */
     static constexpr int LED_SECTION_WIDTH = LED_CELL_WIDTH * LED_COUNT;
 
+    /** Width in pixels reserved to the left of the LED box for the per-row
+     *  storeline index number.  The number is drawn outside the LED box. */
+    static constexpr int STORELINE_NUMBER_WIDTH = 28;
+
+    /** X co-ordinate of the left edge of the LED section (offset from the
+     *  left of the screen by the storeline number column). */
+    static constexpr int LED_SECTION_X = STORELINE_NUMBER_WIDTH;
+
     /** X co-ordinate of the left edge of the storeline text section. */
-    static constexpr int TEXT_SECTION_X = LED_SECTION_WIDTH;
+    static constexpr int TEXT_SECTION_X = LED_SECTION_X + LED_SECTION_WIDTH;
 
     /** Pixel width of the storeline text section. */
     static constexpr int TEXT_SECTION_WIDTH = 200;
