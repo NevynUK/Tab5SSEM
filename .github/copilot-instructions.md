@@ -147,9 +147,9 @@ by the component layer.
 
 ## Build & Flash
 
-```bash
+```zsh
 # One-time environment setup
-. $IDF_PATH/export.sh
+useidf-5-5-3
 
 # Build
 idf.py build
