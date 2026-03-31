@@ -92,7 +92,7 @@ extern "C" void app_main(void)
         }
 
         Display::PostMessage(message);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10));
 
         ++count;
     }
