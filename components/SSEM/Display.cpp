@@ -166,7 +166,7 @@ void Display::DrawAllStorelines()
     const int boxHeight = centreHeight - (2 * BOX_PADDING);
 
     // White border box enclosing all LED rows
-    _display->drawRect(0, boxY, LED_SECTION_WIDTH + BOX_PADDING, boxHeight, TFT_WHITE);
+    _display->drawRect(LED_SECTION_X, boxY, LED_SECTION_WIDTH + BOX_PADDING, boxHeight, TFT_WHITE);
 
     // White border box enclosing all storeline text rows (with TEXT_LEFT_MARGIN separation from LEDs)
     _display->drawRect(TEXT_SECTION_X + TEXT_LEFT_MARGIN - BOX_PADDING, boxY, TEXT_SECTION_WIDTH - TEXT_LEFT_MARGIN + (2 * BOX_PADDING), boxHeight, TFT_WHITE);
@@ -188,13 +188,21 @@ void Display::DrawStoreline(int lineIndex)
     const int rowY = HEADER_HEIGHT + storelineOffset + lineIndex * rowHeight;
     const int ledCentreY = rowY + rowHeight / 2;
 
+    // Draw the storeline index number to the left of the LED box (outside it)
+    char lineNumber[4];
+    snprintf(lineNumber, sizeof(lineNumber), "%d", lineIndex);
+    _display->setFont(&fonts::Font2);
+    _display->setTextColor(TFT_WHITE, TFT_BLACK);
+    _display->setTextDatum(textdatum_t::middle_right);
+    _display->drawString(lineNumber, LED_SECTION_X - BOX_PADDING, ledCentreY);
+
     // Draw 32 LEDs — bit 0 (LSB) is displayed leftmost
     const uint32_t value = _store[lineIndex];
 
     for (int bit = 0; bit < LED_COUNT; ++bit)
     {
         const bool on = ((value >> bit) & 1U) != 0U;
-        const int ledCentreX = bit * LED_CELL_WIDTH + LED_CELL_WIDTH / 2;
+        const int ledCentreX = LED_SECTION_X + bit * LED_CELL_WIDTH + LED_CELL_WIDTH / 2;
         DrawLed(ledCentreX, ledCentreY, LED_OUTER_RADIUS, on);
     }
 

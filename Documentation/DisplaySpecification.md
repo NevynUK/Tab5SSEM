@@ -74,3 +74,5 @@ The code controlling the messages shall be in the `app_main` function.  This wil
 The code will loop counting from 0 to UINT_MAX.  Each of the Storelines will be set to the count value.  The code will use `vTaskDelay` to wait for 1 second between each value.
 
 The Display class will receive the message from the message queue and use the data in the message to update the display.
+
+Each Storeline should have a number to the left of the LEDs.  This can exist outside of the box containing the LEDs.
