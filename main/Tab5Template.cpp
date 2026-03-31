@@ -50,13 +50,13 @@ void Setup(void)
     if (rtc != nullptr)
     {
         struct tm setTime = {};
-        setTime.tm_year  = 2026 - 1900;
-        setTime.tm_mon   = 3 - 1;       // March (0-based)
-        setTime.tm_mday  = 21;
-        setTime.tm_hour  = 14;
-        setTime.tm_min   = 42;
-        setTime.tm_sec   = 0;
-        setTime.tm_wday  = 6;           // Saturday
+        setTime.tm_year = 2026 - 1900;
+        setTime.tm_mon = 3 - 1; // March (0-based)
+        setTime.tm_mday = 21;
+        setTime.tm_hour = 14;
+        setTime.tm_min = 42;
+        setTime.tm_sec = 0;
+        setTime.tm_wday = 6; // Saturday
         setTime.tm_isdst = -1;
         rtc->SetTime(setTime);
     }

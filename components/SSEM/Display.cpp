@@ -80,11 +80,8 @@ void Display::ShowSplash(SDCard *sdCard)
     if (sdCard != nullptr && sdCard->IsMounted())
     {
         const sdmmc_card_t *card = sdCard->GetCard();
-        const uint64_t sizeBytes =
-            static_cast<uint64_t>(card->csd.capacity) *
-            static_cast<uint64_t>(card->csd.sector_size);
-        const double sizeGigabytes =
-            static_cast<double>(sizeBytes) / (1024.0 * 1024.0 * 1024.0);
+        const uint64_t sizeBytes = static_cast<uint64_t>(card->csd.capacity) * static_cast<uint64_t>(card->csd.sector_size);
+        const double sizeGigabytes = static_cast<double>(sizeBytes) / (1024.0 * 1024.0 * 1024.0);
 
         char sdInfo[64];
         snprintf(sdInfo, sizeof(sdInfo), "SD Card: %.1f GB  (%s)", sizeGigabytes, card->cid.name);
@@ -165,18 +162,14 @@ void Display::DrawAllStorelines()
     _display->startWrite();
 
     const int centreHeight = _display->height() - HEADER_HEIGHT - FOOTER_HEIGHT;
-    const int boxY         = HEADER_HEIGHT + BOX_PADDING;
-    const int boxHeight    = centreHeight - (2 * BOX_PADDING);
+    const int boxY = HEADER_HEIGHT + BOX_PADDING;
+    const int boxHeight = centreHeight - (2 * BOX_PADDING);
 
     // White border box enclosing all LED rows
     _display->drawRect(0, boxY, LED_SECTION_WIDTH + BOX_PADDING, boxHeight, TFT_WHITE);
 
     // White border box enclosing all storeline text rows (with TEXT_LEFT_MARGIN separation from LEDs)
-    _display->drawRect(TEXT_SECTION_X + TEXT_LEFT_MARGIN - BOX_PADDING,
-                       boxY,
-                       TEXT_SECTION_WIDTH - TEXT_LEFT_MARGIN + (2 * BOX_PADDING),
-                       boxHeight,
-                       TFT_WHITE);
+    _display->drawRect(TEXT_SECTION_X + TEXT_LEFT_MARGIN - BOX_PADDING, boxY, TEXT_SECTION_WIDTH - TEXT_LEFT_MARGIN + (2 * BOX_PADDING), boxHeight, TFT_WHITE);
 
     for (int i = 0; i < STORELINE_COUNT; ++i)
     {
@@ -188,12 +181,12 @@ void Display::DrawAllStorelines()
 
 void Display::DrawStoreline(int lineIndex)
 {
-    const int centreHeight  = _display->height() - HEADER_HEIGHT - FOOTER_HEIGHT;
-    const int rowHeight     = centreHeight / STORELINE_COUNT;
-    const int totalUsed     = rowHeight * STORELINE_COUNT;
+    const int centreHeight = _display->height() - HEADER_HEIGHT - FOOTER_HEIGHT;
+    const int rowHeight = centreHeight / STORELINE_COUNT;
+    const int totalUsed = rowHeight * STORELINE_COUNT;
     const int storelineOffset = (centreHeight - totalUsed) / 2;
-    const int rowY          = HEADER_HEIGHT + storelineOffset + lineIndex * rowHeight;
-    const int ledCentreY    = rowY + rowHeight / 2;
+    const int rowY = HEADER_HEIGHT + storelineOffset + lineIndex * rowHeight;
+    const int ledCentreY = rowY + rowHeight / 2;
 
     // Draw 32 LEDs — bit 0 (LSB) is displayed leftmost
     const uint32_t value = _store[lineIndex];
@@ -230,7 +223,7 @@ void Display::OnSplashTouch(const lgfx::touch_point_t *points, int count)
 
 bool Display::PostMessage(const DisplayMessage &message)
 {
-    return(xQueueSend(_queue, &message, 0) == pdTRUE);
+    return (xQueueSend(_queue, &message, 0) == pdTRUE);
 }
 
 void Display::DisplayTask(void *parameter)
