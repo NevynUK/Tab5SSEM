@@ -221,6 +221,10 @@ private:
      *  the LED column and the storeline text. */
     static constexpr int TEXT_LEFT_MARGIN = 16;
 
+    /** Width in pixels reserved for the zero-padded 8-digit hex value column
+     *  that appears inside the text box, to the left of the mnemonic label. */
+    static constexpr int HEX_COLUMN_WIDTH = 72;
+
     /** FreeRTOS queue handle for receiving DisplayMessage updates. */
     static QueueHandle_t _queue;
 

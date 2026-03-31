@@ -206,11 +206,16 @@ void Display::DrawStoreline(int lineIndex)
         DrawLed(ledCentreX, ledCentreY, LED_OUTER_RADIUS, on);
     }
 
-    // Draw the text label to the right of the LED section
+    // Draw the zero-padded 8-digit hex value of the storeline word
+    char hexValue[9];
+    snprintf(hexValue, sizeof(hexValue), "%08lX", value);
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_left);
-    _display->drawString(_labels[lineIndex], TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING, ledCentreY);
+    _display->drawString(hexValue, TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING, ledCentreY);
+
+    // Draw the mnemonic text label to the right of the hex column
+    _display->drawString(_labels[lineIndex], TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING + HEX_COLUMN_WIDTH, ledCentreY);
 }
 
 void Display::DrawLed(int centreX, int centreY, int radius, bool on)
