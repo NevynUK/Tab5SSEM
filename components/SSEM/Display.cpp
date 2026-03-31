@@ -202,7 +202,8 @@ void Display::DrawStoreline(int lineIndex)
     for (int bit = 0; bit < LED_COUNT; ++bit)
     {
         const bool on = ((value >> bit) & 1U) != 0U;
-        const int ledCentreX = LED_SECTION_X + bit * LED_CELL_WIDTH + LED_CELL_WIDTH / 2;
+        const int group = bit / LED_GROUP_SIZE;
+        const int ledCentreX = LED_SECTION_X + bit * LED_CELL_WIDTH + LED_CELL_WIDTH / 2 + group * LED_GROUP_GAP;
         DrawLed(ledCentreX, ledCentreY, LED_OUTER_RADIUS, on);
     }
 
