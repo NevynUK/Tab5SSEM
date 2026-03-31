@@ -95,9 +95,9 @@ check_command_status() {
 #
 # Set the IDF variable in case we are running in a shell where eim has been used to install ESP-IDF.
 #
-clang-format -i $scriptdir/components/tab5/*.?pp
 clang-format -i $scriptdir/main/*.?pp
 find "$scriptdir/tests" -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" | xargs clang-format -i
+find "$scriptdir/components" -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" | xargs clang-format -i
 
 now=$(date +"%T")
 printf "Reformatting code finished at $now\n"
