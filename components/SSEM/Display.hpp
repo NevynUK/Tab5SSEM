@@ -185,8 +185,17 @@ private:
     /** Width and height of each LED cell in pixels (square cells). */
     static constexpr int LED_CELL_WIDTH = 20;
 
-    /** Total pixel width of the LED grid section (LED_CELL_WIDTH × LED_COUNT). */
-    static constexpr int LED_SECTION_WIDTH = LED_CELL_WIDTH * LED_COUNT;
+    /** Number of LEDs per visual group, separated by a small gap. */
+    static constexpr int LED_GROUP_SIZE = 4;
+
+    /** Gap in pixels inserted between adjacent LED groups. */
+    static constexpr int LED_GROUP_GAP = 8;
+
+    /** Number of LED groups per storeline. */
+    static constexpr int LED_GROUP_COUNT = LED_COUNT / LED_GROUP_SIZE;
+
+    /** Total pixel width of the LED grid section including inter-group gaps. */
+    static constexpr int LED_SECTION_WIDTH = (LED_CELL_WIDTH * LED_COUNT) + ((LED_GROUP_COUNT - 1) * LED_GROUP_GAP);
 
     /** Width in pixels reserved to the left of the LED box for the per-row
      *  storeline index number.  The number is drawn outside the LED box. */
