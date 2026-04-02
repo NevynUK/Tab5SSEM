@@ -19,6 +19,7 @@ set(CMAKE_C_STANDARD 11)
 #   Add extra components.
 #
 list(APPEND EXTRA_COMPONENT_DIRS components/Tab5)
+list(APPEND EXTRA_COMPONENT_DIRS components/ALU)
 
 project(Tab5Template)
 

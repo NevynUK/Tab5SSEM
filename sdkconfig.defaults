@@ -19,3 +19,7 @@ CONFIG_SPIRAM_SPEED_200M=y
 # Partition table — 16MB flash requires a custom layout; default single-app gives only 1MB
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# C++ Compiler Options
+CONFIG_COMPILER_CXX_EXCEPTIONS=y
+CONFIG_COMPILER_CXX_EXCEPTIONS_EMG_POOL_SIZE=0
