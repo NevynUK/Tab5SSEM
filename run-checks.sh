@@ -65,4 +65,7 @@ cppcheck --error-exitcode=1 --quiet --check-level=exhaustive --force --inline-su
 
 echo "Running clang-format"
 clang-format --dry-run --Werror $VERBOSE_FLAGS $SOURCE_DIR/main/*.?pp
-clang-format --dry-run --Werror $VERBOSE_FLAGS $COMPONENTS_DIR/Tab5/*.?pp
+
+find "$scriptdir/tests" -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" | xargs clang-format --dry-run --Werror $VERBOSE_FLAGS
+find "$scriptdir/components" -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" | xargs clang-format --dry-run --Werror $VERBOSE_FLAGS
+

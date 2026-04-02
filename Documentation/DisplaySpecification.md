@@ -100,3 +100,19 @@ The Display task blocks on `xQueueReceive`.  On each message received it:
 1. Copies the storeline values and labels into the static display state.
 2. Calls `DrawAllStorelines()` to redraw all 32 rows.
 3. Calls `display()` to flush the framebuffer to the MIPI-DSI panel.
+
+## Control Panel
+
+### File Selection
+
+Add a button to the Control Panel with the label `Load`.
+
+When load is pressed a new dialog is displayed.  The dialog should be a file browse dialog containing a scrollable list of files, and OK button and a Cancel button.
+
+Pressing cancel closed the dialog and restores the display.
+
+The scrollable list contains a list of files on the SD Card.
+
+Pressing OK with no file selected does nothing.
+
+Pressing OK with a file selected executes a callback in the Tab5Template.cpp file.  The callback updates the header with the file name.
