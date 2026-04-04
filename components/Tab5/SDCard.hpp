@@ -39,63 +39,16 @@
 class SDCard
 {
 public:
-    /**
-     * @brief Returns the existing singleton instance.
-     *
-     * @return Pointer to the singleton, or nullptr if Initialise() has not
-     *         yet been called.
-     */
     static SDCard *GetInstance();
-
-    /**
-     * @brief Creates and initialises the singleton.
-     *
-     * Acquires the on-chip LDO (channel 4), mounts the SD card via the
-     * SDMMC host in 4-bit mode, and registers the FAT filesystem at
-     * MOUNT_POINT.  If no card is present, or if the mount fails, the
-     * singleton is still created but IsMounted() returns false.
-     *
-     * @return Pointer to the newly created singleton, or nullptr if the
-     *         singleton already exists.
-     */
     static SDCard *Initialise();
-
-    /**
-     * @brief Destructor.
-     *
-     * Unmounts the FAT filesystem, releases the SDMMC host, and deletes
-     * the on-chip LDO power controller.  Resets the singleton pointer so
-     * that Initialise() may be called again.
-     */
     ~SDCard();
-
-    /**
-     * @brief Returns whether the card was successfully mounted.
-     *
-     * @return true if the card is mounted and file I/O is available.
-     */
     bool IsMounted() const;
-
-    /**
-     * @brief Returns a pointer to the raw SDMMC card descriptor.
-     *
-     * The descriptor contains card identification data (name, revision,
-     * serial number) and capacity information.
-     *
-     * @return Pointer to sdmmc_card_t, or nullptr if the card is not mounted.
-     */
     const sdmmc_card_t *GetCard() const;
 
     /** @brief VFS path prefix under which the SD card filesystem is mounted. */
     static constexpr const char *MOUNT_POINT = "/sdcard";
 
 private:
-    /**
-     * @brief Private constructor — use Initialise() to create the singleton.
-     *
-     * Acquires the on-chip LDO, configures the SDMMC host and slot, and
-     * attempts to mount the FAT filesystem.  Sets _mounted accordingly.
-     */
     SDCard();
 
     /** @brief Singleton instance pointer. */

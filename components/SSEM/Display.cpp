@@ -40,6 +40,19 @@ QueueHandle_t Display::_queue = nullptr;
 // Public methods
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Initialises storage, shows the splash screen, draws the main
+ *        interface, then starts the Display FreeRTOS task.
+ *
+ * Stores the display pointer, zeroes the SSEM store, sets all labels
+ * to "JP 0", delegates to ShowSplash() then ShowMain(), creates the
+ * message queue and launches the Display task.
+ *
+ * @param display  Reference to the global M5GFX instance (already
+ *                 initialised with the correct rotation).
+ * @param sdCard   Pointer to the SDCard singleton, or nullptr if no
+ *                 card is present.
+ */
 void Display::Run(M5GFX &display, SDCard *sdCard)
 {
     _display = &display;
@@ -61,6 +74,15 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
 // Private methods
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Renders the splash screen and blocks until dismissed.
+ *
+ * Displays the SSEM Emulator title, "Manchester Baby" subtitle, and SD
+ * card information.  Registers a temporary touch callback and blocks for
+ * up to SPLASH_TIMEOUT_MS milliseconds, or until a touch is detected.
+ *
+ * @param sdCard  Pointer to the SDCard singleton, or nullptr.
+ */
 void Display::ShowSplash(SDCard *sdCard)
 {
     const int centreX = _display->width() / 2;
@@ -120,6 +142,13 @@ void Display::ShowSplash(SDCard *sdCard)
     TouchInput::GetInstance()->RemoveCallback(OnSplashTouch);
 }
 
+/**
+ * @brief Renders the full main SSEM interface.
+ *
+ * Fills the screen black, then draws the header, footer, and all 32
+ * storeline rows.  Flushes the framebuffer to the MIPI-DSI panel on
+ * completion.
+ */
 void Display::ShowMain()
 {
     _display->startWrite();
@@ -133,6 +162,11 @@ void Display::ShowMain()
     _display->display();
 }
 
+/**
+ * @brief Draws the header banner across the top of the screen.
+ *
+ * White background, black text, centred, using Font4 (~14 px).
+ */
 void Display::DrawHeader()
 {
     _display->startWrite();
@@ -144,6 +178,11 @@ void Display::DrawHeader()
     _display->endWrite();
 }
 
+/**
+ * @brief Draws the footer bar across the bottom of the screen.
+ *
+ * White background, black text, left-aligned, using Font2 (~8 px).
+ */
 void Display::DrawFooter()
 {
     const int footerY = _display->height() - FOOTER_HEIGHT;
@@ -157,6 +196,12 @@ void Display::DrawFooter()
     _display->endWrite();
 }
 
+/**
+ * @brief Draws all 32 storeline rows into the centre panel.
+ *
+ * Wraps individual DrawStoreline() calls inside a single
+ * startWrite / endWrite pair for efficiency.
+ */
 void Display::DrawAllStorelines()
 {
     _display->startWrite();
@@ -179,6 +224,14 @@ void Display::DrawAllStorelines()
     _display->endWrite();
 }
 
+/**
+ * @brief Draws one storeline row: index number, 32 LEDs, and the text label.
+ *
+ * The storeline index is drawn to the left of the LED box, outside it.
+ * Must be called within an active startWrite / endWrite pair on _display.
+ *
+ * @param lineIndex  Zero-based storeline index (0–31).
+ */
 void Display::DrawStoreline(int lineIndex)
 {
     const int centreHeight = _display->height() - HEADER_HEIGHT - FOOTER_HEIGHT;
@@ -219,12 +272,34 @@ void Display::DrawStoreline(int lineIndex)
     _display->drawString(_labels[lineIndex], TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING + HEX_COLUMN_WIDTH, ledCentreY);
 }
 
+/**
+ * @brief Draws a single LED as a white-bordered circle with a colour fill.
+ *
+ * Renders a filled white circle of the given radius, then overlays a
+ * smaller filled circle in green (on) or black (off) to simulate an
+ * illuminated LED.  Must be called within an active startWrite /
+ * endWrite pair on _display.
+ *
+ * @param centreX  X co-ordinate of the LED centre.
+ * @param centreY  Y co-ordinate of the LED centre.
+ * @param radius   Outer radius of the white border circle in pixels.
+ * @param on       true for green inner fill (LED lit); false for black.
+ */
 void Display::DrawLed(int centreX, int centreY, int radius, bool on)
 {
     _display->fillCircle(centreX, centreY, radius, TFT_WHITE);
     _display->fillCircle(centreX, centreY, radius - 2, on ? TFT_GREEN : TFT_BLACK);
 }
 
+/**
+ * @brief Touch callback active during the splash screen.
+ *
+ * Sets _splashDismissed to true when at least one touch point is active,
+ * allowing the splash polling loop to exit early.
+ *
+ * @param points  Array of screen-space touch co-ordinates.
+ * @param count   Number of active touch points; zero when all lifted.
+ */
 void Display::OnSplashTouch(const lgfx::touch_point_t *points, int count)
 {
     (void) points;
@@ -235,11 +310,29 @@ void Display::OnSplashTouch(const lgfx::touch_point_t *points, int count)
     }
 }
 
+/**
+ * @brief Posts a DisplayMessage to the display queue.
+ *
+ * Non-blocking: if the queue is full the message is discarded and false
+ * is returned.
+ *
+ * @param message  The display state snapshot to enqueue.
+ * @return true if the message was accepted; false if the queue was full.
+ */
 bool Display::PostMessage(const DisplayMessage &message)
 {
     return (xQueueSend(_queue, &message, 0) == pdTRUE);
 }
 
+/**
+ * @brief FreeRTOS task body for the Display task.
+ *
+ * Blocks indefinitely on _queue.  On each message received, copies the
+ * storeline values and text labels into the static members then redraws
+ * all storeline rows and flushes the framebuffer.
+ *
+ * @param parameter  Unused; required by the FreeRTOS task signature.
+ */
 void Display::DisplayTask(void *parameter)
 {
     (void) parameter;

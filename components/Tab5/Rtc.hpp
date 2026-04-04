@@ -141,96 +141,23 @@ public:
     // Singleton interface
     // =========================================================================
 
-    /**
-     * @brief Returns the existing singleton instance.
-     *
-     * @return Pointer to the singleton, or nullptr if Initialise() has not
-     *         yet been called.
-     */
     static Rtc *GetInstance();
-
-    /**
-     * @brief Creates and initialises the singleton.
-     *
-     * Opens an I2C master bus on the Tab5 RTC I2C pins, verifies the chip
-     * is present, checks the VLF flag, and performs a software reset if
-     * the oscillator was stopped.
-     *
-     * @return Pointer to the newly created singleton, or nullptr if the
-     *         singleton already exists or initialisation fails.
-     */
     static Rtc *Initialise();
-
-    /**
-     * @brief Destructor.
-     *
-     * Stops any active alarm or timer interrupt, releases the I2C device
-     * handle, deletes the I2C master bus, and resets the singleton pointer
-     * so that Initialise() may be called again.
-     */
     ~Rtc();
 
     // =========================================================================
     // Time
     // =========================================================================
 
-    /**
-     * @brief Reads the current time from the RTC into a standard tm struct.
-     *
-     * Year is stored as years since 1900 (matching struct tm convention).
-     * Month is 0-based (0 = January).
-     *
-     * @param[out] time  Struct to fill with the current date and time.
-     * @return true on success; false if the I2C transaction failed.
-     */
     bool GetTime(struct tm &time) const;
-
-    /**
-     * @brief Sets the RTC time from a standard tm struct.
-     *
-     * Stops the timekeeping oscillator during the write and restarts it
-     * immediately after, per the datasheet requirement.
-     *
-     * @param time  Date and time to write.  Year is years-since-1900;
-     *              month is 0-based.
-     * @return true on success; false if the I2C transaction failed.
-     */
     bool SetTime(const struct tm &time);
 
     // =========================================================================
     // Alarm
     // =========================================================================
 
-    /**
-     * @brief Configures the alarm registers.
-     *
-     * Writes the alarm minute (0x17), hour (0x18), and day/week (0x19)
-     * registers and sets the WADA bit in the Extension Register.  Does NOT
-     * automatically enable the alarm interrupt — call EnableAlarmInterrupt()
-     * separately.
-     *
-     * @param config  Alarm match configuration.
-     * @return true on success.
-     */
     bool SetAlarm(const AlarmConfig &config);
-
-    /**
-     * @brief Reads the current alarm register settings.
-     *
-     * @param[out] config  Filled with the current alarm configuration.
-     * @return true on success.
-     */
     bool GetAlarm(AlarmConfig &config) const;
-
-    /**
-     * @brief Enables or disables the alarm interrupt (AIE bit in Control 0).
-     *
-     * When enabled, the RX8130CE asserts /IRQ LOW when the alarm time is
-     * reached.  Clear the AF flag via ClearFlags() to deassert /IRQ.
-     *
-     * @param enable  true to enable; false to disable.
-     * @return true on success.
-     */
     bool EnableAlarmInterrupt(bool enable);
 
     // =========================================================================
@@ -251,36 +178,13 @@ public:
      * @return true on success.
      */
     bool StartWakeupTimer(uint16_t countdownValue, TimerClockSource clockSource, bool enableInterrupt);
-
-    /**
-     * @brief Stops the wakeup timer and disables its interrupt.
-     *
-     * Clears the TE and TIE bits without modifying the countdown value.
-     *
-     * @return true on success.
-     */
     bool StopWakeupTimer();
 
     // =========================================================================
     // Status flags
     // =========================================================================
 
-    /**
-     * @brief Reads the current status flags from Flag Register 0x1D.
-     *
-     * @return Bitmask of StatusFlags constants; 0 if the read fails.
-     */
     StatusFlags GetFlags() const;
-
-    /**
-     * @brief Clears the specified status flags in Flag Register 0x1D.
-     *
-     * Performs a read-modify-write so that only the requested bits are
-     * cleared.  Must be called after handling an interrupt to deassert /IRQ.
-     *
-     * @param flags  Bitmask of StatusFlags constants to clear.
-     * @return true on success.
-     */
     bool ClearFlags(StatusFlags flags);
 
 private:
@@ -332,67 +236,12 @@ private:
     // Constructor and helpers
     // =========================================================================
 
-    /**
-     * @brief Private constructor — use Initialise() to create the singleton.
-     *
-     * Opens the I2C master bus and adds the RX8130CE device.  Throws no
-     * exceptions; check GetInstance() != nullptr for success.
-     */
     Rtc();
-
-    /**
-     * @brief Writes one byte to an RX8130CE register.
-     *
-     * @param registerAddress  Target register address.
-     * @param value            Byte to write.
-     * @return true on I2C success.
-     */
     bool WriteRegister(uint8_t registerAddress, uint8_t value) const;
-
-    /**
-     * @brief Reads one or more consecutive bytes from the RX8130CE.
-     *
-     * @param registerAddress  First register address to read.
-     * @param buffer           Destination buffer.
-     * @param length           Number of bytes to read.
-     * @return true on I2C success.
-     */
     bool ReadRegisters(uint8_t registerAddress, uint8_t *buffer, size_t length) const;
-
-    /**
-     * @brief Converts a BCD-encoded byte to a decimal integer.
-     *
-     * @param bcd  BCD byte.
-     * @return Decimal value.
-     */
     static uint8_t BcdToDec(uint8_t bcd);
-
-    /**
-     * @brief Converts a decimal integer (0–99) to BCD encoding.
-     *
-     * @param decimal  Value to convert.
-     * @return BCD byte.
-     */
     static uint8_t DecToBcd(uint8_t decimal);
-
-    /**
-     * @brief Sets or clears the STOP bit in Control Register 0.
-     *
-     * Stopping the oscillator is required before writing time registers.
-     *
-     * @param stop  true to stop; false to restart.
-     * @return true on I2C success.
-     */
     bool SetStop(bool stop);
-
-    /**
-     * @brief Performs the power-on initialisation sequence from the datasheet.
-     *
-     * Waits 30 ms, performs a dummy-read, checks the VLF flag, and issues
-     * a software reset if necessary.
-     *
-     * @return true if the chip is operational after initialisation.
-     */
     bool PerformStartup();
 
     // =========================================================================

@@ -63,11 +63,27 @@ Rtc *Rtc::_instance = nullptr;
 // Public static interface
 // =============================================================================
 
+/**
+ * @brief Returns the existing singleton instance.
+ *
+ * @return Pointer to the singleton, or nullptr if Initialise() has not
+ *         yet been called.
+ */
 Rtc *Rtc::GetInstance()
 {
     return (_instance);
 }
 
+/**
+ * @brief Creates and initialises the singleton.
+ *
+ * Opens an I2C master bus on the Tab5 RTC I2C pins, verifies the chip
+ * is present, checks the VLF flag, and performs a software reset if
+ * the oscillator was stopped.
+ *
+ * @return Pointer to the newly created singleton, or nullptr if the
+ *         singleton already exists or initialisation fails.
+ */
 Rtc *Rtc::Initialise()
 {
     if (_instance != nullptr)
@@ -90,6 +106,12 @@ Rtc *Rtc::Initialise()
 // Constructor / Destructor
 // =============================================================================
 
+/**
+ * @brief Private constructor — use Initialise() to create the singleton.
+ *
+ * Opens the I2C master bus and adds the RX8130CE device.  Throws no
+ * exceptions; check GetInstance() != nullptr for success.
+ */
 Rtc::Rtc() : _busHandle(nullptr), _deviceHandle(nullptr), _initialised(false), _busOwned(false)
 {
     // Attempt to reuse the I2C_NUM_1 bus that M5GFX creates during display.init().
@@ -134,6 +156,13 @@ Rtc::Rtc() : _busHandle(nullptr), _deviceHandle(nullptr), _initialised(false), _
     _initialised = PerformStartup();
 }
 
+/**
+ * @brief Destructor.
+ *
+ * Stops any active alarm or timer interrupt, releases the I2C device
+ * handle, deletes the I2C master bus, and resets the singleton pointer
+ * so that Initialise() may be called again.
+ */
 Rtc::~Rtc()
 {
     if (_deviceHandle != nullptr)
@@ -162,6 +191,15 @@ Rtc::~Rtc()
 // Time
 // =============================================================================
 
+/**
+ * @brief Reads the current time from the RTC into a standard tm struct.
+ *
+ * Year is stored as years since 1900 (matching struct tm convention).
+ * Month is 0-based (0 = January).
+ *
+ * @param[out] time  Struct to fill with the current date and time.
+ * @return true on success; false if the I2C transaction failed.
+ */
 bool Rtc::GetTime(struct tm &time) const
 {
     uint8_t buffer[7] = {};
@@ -192,6 +230,16 @@ bool Rtc::GetTime(struct tm &time) const
     return (true);
 }
 
+/**
+ * @brief Sets the RTC time from a standard tm struct.
+ *
+ * Stops the timekeeping oscillator during the write and restarts it
+ * immediately after, per the datasheet requirement.
+ *
+ * @param time  Date and time to write.  Year is years-since-1900;
+ *              month is 0-based.
+ * @return true on success; false if the I2C transaction failed.
+ */
 bool Rtc::SetTime(const struct tm &time)
 {
     if (!SetStop(true))
@@ -225,6 +273,17 @@ bool Rtc::SetTime(const struct tm &time)
 // Alarm
 // =============================================================================
 
+/**
+ * @brief Configures the alarm registers.
+ *
+ * Writes the alarm minute (0x17), hour (0x18), and day/week (0x19)
+ * registers and sets the WADA bit in the Extension Register.  Does NOT
+ * automatically enable the alarm interrupt — call EnableAlarmInterrupt()
+ * separately.
+ *
+ * @param config  Alarm match configuration.
+ * @return true on success.
+ */
 bool Rtc::SetAlarm(const AlarmConfig &config)
 {
     // Update the WADA bit in the Extension Register.
@@ -282,6 +341,12 @@ bool Rtc::SetAlarm(const AlarmConfig &config)
     return (result == ESP_OK);
 }
 
+/**
+ * @brief Reads the current alarm register settings.
+ *
+ * @param[out] config  Filled with the current alarm configuration.
+ * @return true on success.
+ */
 bool Rtc::GetAlarm(AlarmConfig &config) const
 {
     uint8_t alarmBuffer[3] = {};
@@ -324,6 +389,15 @@ bool Rtc::GetAlarm(AlarmConfig &config) const
     return (true);
 }
 
+/**
+ * @brief Enables or disables the alarm interrupt (AIE bit in Control 0).
+ *
+ * When enabled, the RX8130CE asserts /IRQ LOW when the alarm time is
+ * reached.  Clear the AF flag via ClearFlags() to deassert /IRQ.
+ *
+ * @param enable  true to enable; false to disable.
+ * @return true on success.
+ */
 bool Rtc::EnableAlarmInterrupt(bool enable)
 {
     uint8_t control0 = 0;
@@ -348,6 +422,19 @@ bool Rtc::EnableAlarmInterrupt(bool enable)
 // Wakeup timer
 // =============================================================================
 
+/**
+ * @brief Configures and starts the countdown wakeup timer.
+ *
+ * Writes the 16-bit countdown value to registers 0x1A–0x1B, sets the
+ * clock source, enables the timer (TE bit), and optionally enables the
+ * timer interrupt (TIE bit).
+ *
+ * @param countdownValue    Initial countdown value (1–65535).  The time
+ *                          until interrupt = countdownValue / clockFrequency.
+ * @param clockSource       Clock source that determines tick frequency.
+ * @param enableInterrupt   true to assert /IRQ when the counter reaches zero.
+ * @return true on success.
+ */
 bool Rtc::StartWakeupTimer(uint16_t countdownValue, TimerClockSource clockSource, bool enableInterrupt)
 {
     // Stop the timer before modifying its registers.
@@ -403,6 +490,13 @@ bool Rtc::StartWakeupTimer(uint16_t countdownValue, TimerClockSource clockSource
     return (WriteRegister(REG_CONTROL0, control0));
 }
 
+/**
+ * @brief Stops the wakeup timer and disables its interrupt.
+ *
+ * Clears the TE and TIE bits without modifying the countdown value.
+ *
+ * @return true on success.
+ */
 bool Rtc::StopWakeupTimer()
 {
     uint8_t extensionReg = 0;
@@ -431,6 +525,11 @@ bool Rtc::StopWakeupTimer()
 // Status flags
 // =============================================================================
 
+/**
+ * @brief Reads the current status flags from Flag Register 0x1D.
+ *
+ * @return Bitmask of StatusFlags constants; 0 if the read fails.
+ */
 Rtc::StatusFlags Rtc::GetFlags() const
 {
     uint8_t flagReg = 0;
@@ -438,6 +537,15 @@ Rtc::StatusFlags Rtc::GetFlags() const
     return (flagReg);
 }
 
+/**
+ * @brief Clears the specified status flags in Flag Register 0x1D.
+ *
+ * Performs a read-modify-write so that only the requested bits are
+ * cleared.  Must be called after handling an interrupt to deassert /IRQ.
+ *
+ * @param flags  Bitmask of StatusFlags constants to clear.
+ * @return true on success.
+ */
 bool Rtc::ClearFlags(StatusFlags flags)
 {
     uint8_t flagReg = 0;
@@ -454,6 +562,13 @@ bool Rtc::ClearFlags(StatusFlags flags)
 // Private helpers
 // =============================================================================
 
+/**
+ * @brief Writes one byte to an RX8130CE register.
+ *
+ * @param registerAddress  Target register address.
+ * @param value            Byte to write.
+ * @return true on I2C success.
+ */
 bool Rtc::WriteRegister(uint8_t registerAddress, uint8_t value) const
 {
     uint8_t packet[2] = {registerAddress, value};
@@ -461,22 +576,50 @@ bool Rtc::WriteRegister(uint8_t registerAddress, uint8_t value) const
     return (result == ESP_OK);
 }
 
+/**
+ * @brief Reads one or more consecutive bytes from the RX8130CE.
+ *
+ * @param registerAddress  First register address to read.
+ * @param buffer           Destination buffer.
+ * @param length           Number of bytes to read.
+ * @return true on I2C success.
+ */
 bool Rtc::ReadRegisters(uint8_t registerAddress, uint8_t *buffer, size_t length) const
 {
     esp_err_t result = i2c_master_transmit_receive(_deviceHandle, &registerAddress, 1, buffer, length, I2C_TIMEOUT_MS);
     return (result == ESP_OK);
 }
 
+/**
+ * @brief Converts a BCD-encoded byte to a decimal integer.
+ *
+ * @param bcd  BCD byte.
+ * @return Decimal value.
+ */
 uint8_t Rtc::BcdToDec(uint8_t bcd)
 {
     return (static_cast<uint8_t>(((bcd >> 4) * 10) + (bcd & 0x0F)));
 }
 
+/**
+ * @brief Converts a decimal integer (0–99) to BCD encoding.
+ *
+ * @param decimal  Value to convert.
+ * @return BCD byte.
+ */
 uint8_t Rtc::DecToBcd(uint8_t decimal)
 {
     return (static_cast<uint8_t>(((decimal / 10) << 4) | (decimal % 10)));
 }
 
+/**
+ * @brief Sets or clears the STOP bit in Control Register 0.
+ *
+ * Stopping the oscillator is required before writing time registers.
+ *
+ * @param stop  true to stop; false to restart.
+ * @return true on I2C success.
+ */
 bool Rtc::SetStop(bool stop)
 {
     uint8_t control0 = 0;
@@ -497,6 +640,14 @@ bool Rtc::SetStop(bool stop)
     return (WriteRegister(REG_CONTROL0, control0));
 }
 
+/**
+ * @brief Performs the power-on initialisation sequence from the datasheet.
+ *
+ * Waits 30 ms, performs a dummy-read, checks the VLF flag, and issues
+ * a software reset if necessary.
+ *
+ * @return true if the chip is operational after initialisation.
+ */
 bool Rtc::PerformStartup()
 {
     // §8.3: Wait at least 30 ms after power-on before the first access.
