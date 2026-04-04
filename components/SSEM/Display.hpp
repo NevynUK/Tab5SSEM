@@ -88,6 +88,11 @@ private:
     static volatile bool _splashDismissed;
 
     /**
+     * @brief Flags indicating which storelines have changed.
+     */
+    static bool _changed[Display::STORELINE_COUNT];
+
+    /**
      * @brief SSEM store — 32 unsigned 32-bit words, all zero initially (JP 0).
      */
     static uint32_t _store[32];
