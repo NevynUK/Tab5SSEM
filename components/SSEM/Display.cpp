@@ -21,19 +21,30 @@
 // Static member definitions
 // ---------------------------------------------------------------------------
 
-/** @brief Pointer to the global M5GFX display instance; assigned by Run(). */
+//**
+ * @brief
+ *
+ */
 M5GFX *Display::_display = nullptr;
 
-/** @brief Set to true by OnSplashTouch to signal touch-based dismissal. */
+/**
+ * @brief Set to true by OnSplashTouch to signal touch-based dismissal.
+ */
 volatile bool Display::_splashDismissed = false;
 
-/** @brief SSEM store words; all initialised to zero (JP 0) in Run(). */
+/**
+ * @brief SSEM store words; all initialised to zero (JP 0) in Run().
+ */
 uint32_t Display::_store[Display::STORELINE_COUNT] = {};
 
-/** @brief Storeline text labels; all initialised to "JP 0" in Run(). */
+/**
+ * @brief Storeline text labels; all initialised to "JP 0" in Run().
+ */
 char Display::_labels[Display::STORELINE_COUNT][32] = {};
 
-/** @brief FreeRTOS queue handle; created by Run() before the Display task is started. */
+/**
+ * @brief FreeRTOS queue handle; created by Run() before the Display task is started.
+ */
 QueueHandle_t Display::_queue = nullptr;
 
 // ---------------------------------------------------------------------------
