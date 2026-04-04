@@ -35,7 +35,9 @@
 class Display
 {
 public:
-    /** Number of storelines in the SSEM store. */
+    /**
+     * @brief Number of storelines in the SSEM store.
+     */
     static constexpr int STORELINE_COUNT = 32;
 
     /**
@@ -46,205 +48,158 @@ public:
      */
     struct DisplayMessage
     {
-        /** Current value of each storeline word. */
+        /**
+         * @brief Current value of each storeline word.
+         */
         uint32_t storelineValues[STORELINE_COUNT];
 
-        /** Text label shown beside each storeline. */
+        /**
+         * @brief Text label shown beside each storeline.
+         */
         char storelineText[STORELINE_COUNT][32];
 
-        /** Reserved — always nullptr for now. */
+        /**
+         * @brief Reserved — always nullptr for now.
+         */
         void *controlState;
     };
 
-    /**
-     * @brief Initialises storage, shows the splash screen, draws the main
-     *        interface, then starts the Display FreeRTOS task.
-     *
-     * Stores the display pointer, zeroes the SSEM store, sets all labels
-     * to "JP 0", delegates to ShowSplash() then ShowMain(), creates the
-     * message queue and launches the Display task.
-     *
-     * @param display  Reference to the global M5GFX instance (already
-     *                 initialised with the correct rotation).
-     * @param sdCard   Pointer to the SDCard singleton, or nullptr if no
-     *                 card is present.
-     */
     static void Run(M5GFX &display, SDCard *sdCard);
-
-    /**
-     * @brief Posts a DisplayMessage to the display queue.
-     *
-     * Non-blocking: if the queue is full the message is discarded and false
-     * is returned.
-     *
-     * @param message  The display state snapshot to enqueue.
-     * @return true if the message was accepted; false if the queue was full.
-     */
     static bool PostMessage(const DisplayMessage &message);
 
 private:
-    /**
-     * @brief Renders the splash screen and blocks until dismissed.
-     *
-     * Displays the SSEM Emulator title, "Manchester Baby" subtitle, and SD
-     * card information.  Registers a temporary touch callback and blocks for
-     * up to SPLASH_TIMEOUT_MS milliseconds, or until a touch is detected.
-     *
-     * @param sdCard  Pointer to the SDCard singleton, or nullptr.
-     */
     static void ShowSplash(SDCard *sdCard);
-
-    /**
-     * @brief Renders the full main SSEM interface.
-     *
-     * Fills the screen black, then draws the header, footer, and all 32
-     * storeline rows.  Flushes the framebuffer to the MIPI-DSI panel on
-     * completion.
-     */
     static void ShowMain();
-
-    /**
-     * @brief Draws the header banner across the top of the screen.
-     *
-     * White background, black text, centred, using Font4 (~14 px).
-     */
     static void DrawHeader();
-
-    /**
-     * @brief Draws the footer bar across the bottom of the screen.
-     *
-     * White background, black text, left-aligned, using Font2 (~8 px).
-     */
     static void DrawFooter();
-
-    /**
-     * @brief Draws all 32 storeline rows into the centre panel.
-     *
-     * Wraps individual DrawStoreline() calls inside a single
-     * startWrite / endWrite pair for efficiency.
-     */
     static void DrawAllStorelines();
-
-    /**
-     * @brief Draws one storeline row: index number, 32 LEDs, and the text label.
-     *
-     * The storeline index is drawn to the left of the LED box, outside it.
-     * Must be called within an active startWrite / endWrite pair on _display.
-     *
-     * @param lineIndex  Zero-based storeline index (0–31).
-     */
     static void DrawStoreline(int lineIndex);
-
-    /**
-     * @brief Draws a single LED as a white-bordered circle with a colour fill.
-     *
-     * Renders a filled white circle of the given radius, then overlays a
-     * smaller filled circle in green (on) or black (off) to simulate an
-     * illuminated LED.  Must be called within an active startWrite /
-     * endWrite pair on _display.
-     *
-     * @param centreX  X co-ordinate of the LED centre.
-     * @param centreY  Y co-ordinate of the LED centre.
-     * @param radius   Outer radius of the white border circle in pixels.
-     * @param on       true for green inner fill (LED lit); false for black.
-     */
     static void DrawLed(int centreX, int centreY, int radius, bool on);
-
-    /**
-     * @brief Touch callback active during the splash screen.
-     *
-     * Sets _splashDismissed to true when at least one touch point is active,
-     * allowing the splash polling loop to exit early.
-     *
-     * @param points  Array of screen-space touch co-ordinates.
-     * @param count   Number of active touch points; zero when all lifted.
-     */
     static void OnSplashTouch(const lgfx::touch_point_t *points, int count);
 
-    /** Pointer to the global M5GFX display instance; assigned by Run(). */
+    /**
+     * @brief Pointer to the global M5GFX display instance; assigned by Run().
+     */
     static M5GFX *_display;
 
-    /** Flagged true by OnSplashTouch to dismiss the splash early. */
+    /**
+     * @brief Flagged true by OnSplashTouch to dismiss the splash early.
+     */
     static volatile bool _splashDismissed;
 
-    /** SSEM store — 32 unsigned 32-bit words, all zero initially (JP 0). */
+    /**
+     * @brief SSEM store — 32 unsigned 32-bit words, all zero initially (JP 0).
+     */
     static uint32_t _store[32];
 
-    /** Text label shown to the right of each storeline, initially "JP 0". */
+    /**
+     * @brief Text label shown to the right of each storeline, initially "JP 0".
+     */
     static char _labels[32][32];
 
-    /** Number of LEDs per storeline (one per bit). */
+    /**
+     * @brief Number of LEDs per storeline (one per bit).
+     */
     static constexpr int LED_COUNT = 32;
 
-    /** Height of the header banner in pixels. */
+    /**
+     * @brief Height of the header banner in pixels.
+     */
     static constexpr int HEADER_HEIGHT = 32;
 
-    /** Height of the footer bar in pixels. */
+    /**
+     * @brief Height of the footer bar in pixels.
+     */
     static constexpr int FOOTER_HEIGHT = 24;
 
-    /** Width and height of each LED cell in pixels (square cells). */
+    /**
+     * @brief Width and height of each LED cell in pixels (square cells).
+     */
     static constexpr int LED_CELL_WIDTH = 20;
 
-    /** Number of LEDs per visual group, separated by a small gap. */
+    /**
+     * @brief Number of LEDs per visual group, separated by a small gap.
+     */
     static constexpr int LED_GROUP_SIZE = 4;
 
-    /** Gap in pixels inserted between adjacent LED groups. */
+    /**
+     * @brief Gap in pixels inserted between adjacent LED groups.
+     */
     static constexpr int LED_GROUP_GAP = 8;
 
-    /** Number of LED groups per storeline. */
+    /**
+     * @brief Number of LED groups per storeline.
+     */
     static constexpr int LED_GROUP_COUNT = LED_COUNT / LED_GROUP_SIZE;
 
-    /** Total pixel width of the LED grid section including inter-group gaps. */
+    /**
+     * @brief Total pixel width of the LED grid section including inter-group gaps.
+     */
     static constexpr int LED_SECTION_WIDTH = (LED_CELL_WIDTH * LED_COUNT) + ((LED_GROUP_COUNT - 1) * LED_GROUP_GAP);
 
-    /** Width in pixels reserved to the left of the LED box for the per-row
-     *  storeline index number.  The number is drawn outside the LED box. */
+    /**
+     * @brief Width in pixels reserved to the left of the LED box for the per-row
+     *        storeline index number.  The number is drawn outside the LED box.
+     */
     static constexpr int STORELINE_NUMBER_WIDTH = 28;
 
-    /** X co-ordinate of the left edge of the LED section (offset from the
-     *  left of the screen by the storeline number column). */
+    /**
+     * @brief X co-ordinate of the left edge of the LED section (offset from the
+     *        left of the screen by the storeline number column).
+     */
     static constexpr int LED_SECTION_X = STORELINE_NUMBER_WIDTH;
 
-    /** X co-ordinate of the left edge of the storeline text section. */
+    /**
+     * @brief X co-ordinate of the left edge of the storeline text section.
+     */
     static constexpr int TEXT_SECTION_X = LED_SECTION_X + LED_SECTION_WIDTH;
 
-    /** Pixel width of the storeline text section. */
+    /**
+     * @brief Pixel width of the storeline text section.
+     */
     static constexpr int TEXT_SECTION_WIDTH = 200;
 
-    /** X co-ordinate of the left edge of the control panel section. */
+    /**
+     * @brief X co-ordinate of the left edge of the control panel section.
+     */
     static constexpr int CONTROL_SECTION_X = TEXT_SECTION_X + TEXT_SECTION_WIDTH;
 
-    /** Outer radius of each LED circle in pixels. */
+    /**
+     * @brief Outer radius of each LED circle in pixels.
+     */
     static constexpr int LED_OUTER_RADIUS = 9;
 
-    /** Inner fill radius of each LED circle in pixels (leaves a white border). */
+    /**
+     * @brief Inner fill radius of each LED circle in pixels (leaves a white border).
+     */
     static constexpr int LED_INNER_RADIUS = 7;
 
-    /** Maximum time the splash is displayed before auto-dismissal (milliseconds). */
+    /**
+     * @brief Maximum time the splash is displayed before auto-dismissal (milliseconds).
+     */
     static constexpr int SPLASH_TIMEOUT_MS = 5000;
 
-    /** Padding in pixels between a white border box and its enclosed content. */
+    /**
+     * @brief Padding in pixels between a white border box and its enclosed content.
+     */
     static constexpr int BOX_PADDING = 4;
 
-    /** Left margin of the text section in pixels, providing separation between
-     *  the LED column and the storeline text. */
+    /**
+     * @brief Left margin of the text section in pixels, providing separation between
+     *        the LED column and the storeline text.
+     */
     static constexpr int TEXT_LEFT_MARGIN = 16;
 
-    /** Width in pixels reserved for the zero-padded 8-digit hex value column
-     *  that appears inside the text box, to the left of the mnemonic label. */
+    /**
+     * @brief Width in pixels reserved for the zero-padded 8-digit hex value column
+     *        that appears inside the text box, to the left of the mnemonic label.
+     */
     static constexpr int HEX_COLUMN_WIDTH = 72;
 
-    /** FreeRTOS queue handle for receiving DisplayMessage updates. */
+    /**
+     * @brief FreeRTOS queue handle for receiving DisplayMessage updates.
+     */
     static QueueHandle_t _queue;
 
-    /**
-     * @brief FreeRTOS task body for the Display task.
-     *
-     * Blocks indefinitely on _queue.  On each message received, copies the
-     * storeline values and text labels into the static members then redraws
-     * all storeline rows and flushes the framebuffer.
-     *
-     * @param parameter  Unused; required by the FreeRTOS task signature.
-     */
     static void DisplayTask(void *parameter);
 };

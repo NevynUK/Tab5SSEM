@@ -21,7 +21,11 @@ set(CMAKE_C_STANDARD 11)
 list(APPEND EXTRA_COMPONENT_DIRS components/Tab5)
 list(APPEND EXTRA_COMPONENT_DIRS components/ALU)
 
-project(Tab5Template)
+project(Tab5SSEM
+        LANGUAGES CXX C
+        VERSION 1.0.0
+        DESCRIPTION "Small Scale Experimental Machine"
+        HOMEPAGE_URL "https://github.com/markstevens/Tab5SSEM")
 
 #
 #   Suppress warnings from third-party managed components only.
