@@ -32,6 +32,11 @@ M5GFX *Display::_display = nullptr;
 volatile bool Display::_splashDismissed = false;
 
 /**
+ * @brief Flags indicating which storelines have changed.
+ */
+bool Display::_changed[Display::STORELINE_COUNT] = {};
+
+/**
  * @brief SSEM store words; all initialised to zero (JP 0) in Run().
  */
 uint32_t Display::_store[Display::STORELINE_COUNT] = {};
@@ -70,6 +75,7 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
     for (int i = 0; i < STORELINE_COUNT; ++i)
     {
         _store[i] = 0U;
+        _changed[i] = true;
         snprintf(_labels[i], sizeof(_labels[i]), "JP 0");
     }
 
@@ -228,7 +234,10 @@ void Display::DrawAllStorelines()
 
     for (int i = 0; i < STORELINE_COUNT; ++i)
     {
-        DrawStoreline(i);
+        if (_changed[i])
+        {
+            DrawStoreline(i);
+        }
     }
 
     _display->endWrite();
@@ -331,7 +340,7 @@ void Display::OnSplashTouch(const lgfx::touch_point_t *points, int count)
  */
 bool Display::PostMessage(const DisplayMessage &message)
 {
-    return (xQueueSend(_queue, &message, 0) == pdTRUE);
+    return (xQueueSend(_queue, &message, portMAX_DELAY) == pdTRUE);
 }
 
 /**
@@ -355,8 +364,16 @@ void Display::DisplayTask(void *parameter)
         {
             for (int i = 0; i < STORELINE_COUNT; ++i)
             {
-                _store[i] = message.storelineValues[i];
-                snprintf(_labels[i], sizeof(_labels[i]), "%s", message.storelineText[i]);
+                if (_store[i] != message.storelineValues[i])
+                {
+                    _changed[i] = true;
+                    _store[i] = message.storelineValues[i];
+                    snprintf(_labels[i], sizeof(_labels[i]), "%s", message.storelineText[i]);
+                }
+                else
+                {
+                    _changed[i] = false;
+                }
             }
 
             DrawAllStorelines();
