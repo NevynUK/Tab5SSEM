@@ -21,9 +21,8 @@
 // Static member definitions
 // ---------------------------------------------------------------------------
 
-//**
- * @brief
- *
+/**
+ * @brief Pointer to the global M5GFX display instance; assigned by Run().
  */
 M5GFX *Display::_display = nullptr;
 
