@@ -131,7 +131,7 @@ std::vector<std::string> ReadSdCardFileNames()
         ESP_LOGE(LOG_TAG, "Failed to open directory %s", SDCard::MOUNT_POINT);
     }
 
-    return(filenames);
+    return (filenames);
 }
 
 /**
@@ -154,7 +154,7 @@ std::vector<std::string> ReadSdCardFileContents(const std::string &filename)
     if (file == nullptr)
     {
         ESP_LOGE(LOG_TAG, "Failed to open file %s: %s", filename.c_str(), strerror(errno));
-        return(lines);
+        return (lines);
     }
 
     char buffer[256];
@@ -175,7 +175,7 @@ std::vector<std::string> ReadSdCardFileContents(const std::string &filename)
     }
 
     fclose(file);
-    return(lines);
+    return (lines);
 }
 
 extern "C" void app_main(void)
@@ -204,7 +204,7 @@ extern "C" void app_main(void)
     if (!fileContents.empty())
     {
         ESP_LOGI(LOG_TAG, "Contents of %s:", "/sdcard/hfr989.ssem");
-        for (const std::string &line : fileContents)
+        for (const std::string &line: fileContents)
         {
             ESP_LOGI(LOG_TAG, "    %s", line.c_str());
         }
