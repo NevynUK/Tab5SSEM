@@ -45,13 +45,17 @@ public:
     bool IsMounted() const;
     const sdmmc_card_t *GetCard() const;
 
-    /** @brief VFS path prefix under which the SD card filesystem is mounted. */
+    /** 
+     * @brief VFS path prefix under which the SD card filesystem is mounted. 
+     */
     static constexpr const char *MOUNT_POINT = "/sdcard";
 
 private:
     SDCard();
 
-    /** @brief Singleton instance pointer. */
+    /** 
+     * @brief Singleton instance pointer.
+     */
     static SDCard *_instance;
 
     // -------------------------------------------------------------------------
@@ -59,39 +63,63 @@ private:
     // Source: M5Stack Tab5 schematics / Espressif BSP (m5stack_tab5).
     // -------------------------------------------------------------------------
 
-    /** @brief SDMMC clock output. */
+    /** 
+     * @brief SDMMC clock output.
+     */
     static constexpr gpio_num_t SD_CLK = GPIO_NUM_43;
 
-    /** @brief SDMMC command / response line. */
+    /** 
+     * @brief SDMMC command / response line.
+     */
     static constexpr gpio_num_t SD_CMD = GPIO_NUM_44;
 
-    /** @brief SDMMC data line 0 (used in both 1-bit and 4-bit modes). */
+    /** 
+     * @brief SDMMC data line 0 (used in both 1-bit and 4-bit modes).
+     */
     static constexpr gpio_num_t SD_D0 = GPIO_NUM_39;
 
-    /** @brief SDMMC data line 1 (4-bit mode only). */
+    /** 
+     * @brief SDMMC data line 1 (4-bit mode only).
+     */
     static constexpr gpio_num_t SD_D1 = GPIO_NUM_40;
 
-    /** @brief SDMMC data line 2 (4-bit mode only). */
+    /** 
+     * @brief SDMMC data line 2 (4-bit mode only).
+     */
     static constexpr gpio_num_t SD_D2 = GPIO_NUM_41;
 
-    /** @brief SDMMC data line 3 / SPI chip-select (4-bit mode only). */
+    /** 
+     * @brief SDMMC data line 3 / SPI chip-select (4-bit mode only).
+     */
     static constexpr gpio_num_t SD_D3 = GPIO_NUM_42;
 
-    /** @brief On-chip LDO channel number that powers the SD card slot. */
+    /** 
+     * @brief On-chip LDO channel number that powers the SD card slot.
+     */
     static constexpr int SD_LDO_CHANNEL = 4;
 
-    /** @brief Maximum number of files that may be open simultaneously. */
+    /** 
+     * @brief Maximum number of files that may be open simultaneously.
+     */
     static constexpr int MAX_OPEN_FILES = 5;
 
-    /** @brief FAT allocation unit size in bytes (16 KB). */
+    /** 
+     * @brief FAT allocation unit size in bytes (16 KB). 
+     */
     static constexpr size_t ALLOCATION_UNIT_BYTES = 16 * 1024;
 
-    /** @brief SDMMC card descriptor populated by esp_vfs_fat_sdmmc_mount(). */
+    /** 
+     * @brief SDMMC card descriptor populated by esp_vfs_fat_sdmmc_mount().
+     */
     sdmmc_card_t *_card;
 
-    /** @brief Handle for the on-chip LDO channel that powers the SD slot. */
+    /** 
+     * @brief Handle for the on-chip LDO channel that powers the SD slot.
+     */
     esp_ldo_channel_handle_t _powerControlHandle;
 
-    /** @brief True when the card is mounted and the filesystem is available. */
+    /** 
+     *  @brief True when the card is mounted and the filesystem is available. 
+     */
     bool _mounted;
 };
