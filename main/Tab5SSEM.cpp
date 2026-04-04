@@ -15,12 +15,25 @@
 #include <ctime>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include "Display.hpp"
 #include "Rtc.hpp"
 #include "SDCard.hpp"
 #include "Touch.hpp"
+#include <string>
+#include <vector>
 
-/** @brief Global display instance used by M5GFX and the SSEM Display component. */
+/**
+ * @brief Tagused for logging the main component.
+ */
+const char *LOG_TAG = "Tab5SSEM";
+
+/**
+ * @brief Global display instance used by M5GFX and the SSEM Display component.
+ */
 M5GFX display;
 
 /**
@@ -64,11 +77,117 @@ void Setup(void)
     Display::Run(display, sdCard);
 }
 
+/**
+ * @brief Read the names of all SSEM program files on the SD card.
+ *
+ * Scans the SD card mount point and returns the full path of every file
+ * whose name ends with the ".ssem" extension (case-sensitive).
+ *
+ * @return std::vector<std::string> Vector of full file paths for each
+ *         ".ssem" file found.  The vector is empty if the SD card could
+ *         not be read or no matching files are present.
+ */
+std::vector<std::string> ReadSdCardFileNames()
+{
+    static constexpr const char *SSEM_EXTENSION = ".ssem";
+    static constexpr size_t SSEM_EXTENSION_LENGTH = 5U;
+
+    std::vector<std::string> filenames;
+
+    DIR *dp = opendir(SDCard::MOUNT_POINT);
+    if (dp != nullptr)
+    {
+        struct dirent *ep;
+        while ((ep = readdir(dp)) != nullptr)
+        {
+            if (ep->d_name[0] == '.')
+            {
+                continue;
+            }
+
+            const std::string name = ep->d_name;
+            if (name.size() > SSEM_EXTENSION_LENGTH && name.compare(name.size() - SSEM_EXTENSION_LENGTH, SSEM_EXTENSION_LENGTH, SSEM_EXTENSION) == 0)
+            {
+                std::string fullPath = SDCard::MOUNT_POINT;
+                fullPath += "/";
+                fullPath += name;
+
+                struct stat fileInfo;
+                if (stat(fullPath.c_str(), &fileInfo) == 0)
+                {
+                    ESP_LOGI(LOG_TAG, "    %s, %" PRIu32, ep->d_name, fileInfo.st_size);
+                    filenames.push_back(fullPath);
+                }
+                else
+                {
+                    ESP_LOGE(LOG_TAG, "    %s, stat failed: %s", ep->d_name, strerror(errno));
+                }
+            }
+        }
+        closedir(dp);
+    }
+    else
+    {
+        ESP_LOGE(LOG_TAG, "Failed to open directory %s", SDCard::MOUNT_POINT);
+    }
+
+    return (filenames);
+}
+
+/**
+ * @brief Read the contents of the specified file, one line per entry.
+ *
+ * Opens the file at the given path for reading.  Each line is stripped of
+ * its trailing newline and carriage-return characters before being appended
+ * to the result vector.  Blank lines and lines that could not be read are
+ * skipped.
+ *
+ * @param filename  Full path to the file to read (e.g. "/sdcard/Add.ssem").
+ * @return std::vector<std::string>  File contents with one entry per line.
+ *         The vector is empty if the file could not be opened.
+ */
+std::vector<std::string> ReadSdCardFileContents(const std::string &filename)
+{
+    std::vector<std::string> lines;
+
+    FILE *file = fopen(filename.c_str(), "r");
+    if (file == nullptr)
+    {
+        ESP_LOGE(LOG_TAG, "Failed to open file %s: %s", filename.c_str(), strerror(errno));
+        return (lines);
+    }
+
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), file) != nullptr)
+    {
+        std::string line = buffer;
+
+        // Strip trailing CR / LF characters
+        while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+        {
+            line.pop_back();
+        }
+
+        if (!line.empty())
+        {
+            lines.push_back(line);
+        }
+    }
+
+    fclose(file);
+    return (lines);
+}
+
 extern "C" void app_main(void)
 {
     Setup();
 
-    // Initialise the message with all storelines zeroed and labelled "JP 0".
+    if (SDCard::GetInstance() != nullptr)
+    {
+        ESP_LOGI(LOG_TAG, "SD card contents:");
+        ReadSdCardFileNames();
+    }
+
     Display::DisplayMessage message = {};
 
     for (int i = 0; i < Display::STORELINE_COUNT; ++i)
@@ -79,6 +198,17 @@ extern "C" void app_main(void)
 
     message.controlState = nullptr;
     Display::PostMessage(message);
+
+    std::vector<std::string> fileNames = ReadSdCardFileNames();
+    std::vector<std::string> fileContents = ReadSdCardFileContents("/sdcard/hfr989.ssem");
+    if (!fileContents.empty())
+    {
+        ESP_LOGI(LOG_TAG, "Contents of %s:", "/sdcard/hfr989.ssem");
+        for (const std::string &line: fileContents)
+        {
+            ESP_LOGI(LOG_TAG, "    %s", line.c_str());
+        }
+    }
 
     // Count from 0 upward, setting every storeline to the current count value,
     // and post a display update every second.
