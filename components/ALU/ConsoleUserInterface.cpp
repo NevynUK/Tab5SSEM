@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "ConsoleUserInterface.hpp"
 
+using namespace std;
+
 /**
  * @brief Construct a new ConsoleUserInterface object
  */
@@ -26,11 +28,9 @@ void ConsoleUserInterface::UpdateDisplayTube(StoreLines &storeLines) const
     printf("                   01234567890123456789012345678901\n");
     for (uint lineNumber = 0; lineNumber < storeLines.Size(); lineNumber++)
     {
-        char *binary = storeLines[lineNumber].Binary();
-        char *disassembled = storeLines[lineNumber].Disassemble();
-        printf("%4d: 0x%08x - %32s %-16s ; %d\n", lineNumber, (uint) storeLines[lineNumber].ReverseBits(), binary, disassembled, (int) storeLines[lineNumber].GetValue());
-        delete[] disassembled;
-        delete[] binary;
+        const string binary = storeLines[lineNumber].Binary();
+        const string disassembled = storeLines[lineNumber].Disassemble();
+        printf("%4d: 0x%08x - %32s %-16s ; %d\n", lineNumber, (uint) storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int) storeLines[lineNumber].GetValue());
     }
 }
 

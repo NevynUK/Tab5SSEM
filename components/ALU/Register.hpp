@@ -1,7 +1,9 @@
 #pragma once
 
-#include <string.h>
+#include <string>
 #include <iostream>
+
+using namespace std;
 
 /**
  * @brief Object representing a register on the SSEM.
@@ -52,14 +54,14 @@ public:
     /**
      * @brief Get the value of the current register as a binary string.
      */
-    char *Binary() const;
+    string Binary() const;
 
     /**
      * @brief Disassemble the register contents into a SSEM assembler instruction.
      *
-     * @return char* SSEM assembler instruction.
+     * @return string SSEM assembler instruction.
      */
-    char *Disassemble() const;
+    string Disassemble() const;
 
     /**
      * @brief Add 1 to the register value.

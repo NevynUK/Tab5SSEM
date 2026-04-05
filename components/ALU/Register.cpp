@@ -1,8 +1,11 @@
-#include <stdlib.h>
+#include <cstdlib>
+#include <string>
 
 #include "Instructions.hpp"
 #include "Register.hpp"
 #include "Constants.hpp"
+
+using namespace std;
 
 /**
  * @brief Construct a new Register object
@@ -89,31 +92,19 @@ void Register::Negate() noexcept
 /**
  * @brief Get the value of the current register as a binary string.
  *
- * Note the caller is responsible for deleting the returned string when it is no longer needed.
- *
- * @return char* Pointer to a new string array containing the binary test.
+ * @return string String containing the binary representation of the register value.
  */
-char *Register::Binary() const
+string Register::Binary() const
 {
-    char *binary = new char[33];
+    string binary(32, '0');
     int32_t mask = 1;
     int32_t value = ReverseBits();
 
-    int bitcount = 32;
-    while (bitcount > 0)
+    for (int bitcount = 31; bitcount >= 0; --bitcount)
     {
-        bitcount--;
-        if (value & mask)
-        {
-            binary[bitcount] = '1';
-        }
-        else
-        {
-            binary[bitcount] = '0';
-        }
+        binary[bitcount] = (value & mask) ? '1' : '0';
         mask <<= 1;
     }
-    binary[32] = '\0';
 
     return (binary);
 }
@@ -166,25 +157,22 @@ uint Register::Opcode() const noexcept
 /**
  * @brief Disassemble the register contents into a SSEM assembler instruction.
  *
- * Note the caller is responsible for deleting the returned string when it is no longer needed.
- *
- * @return char* Disassembled SSEM assembler instruction.
+ * @return string Disassembled SSEM assembler instruction.
  */
-char *Register::Disassemble() const
+string Register::Disassemble() const
 {
-    char *disassembly = new char[Constants::LINE_LENGTH];
-    bzero(disassembly, Constants::LINE_LENGTH);
-
+    char buffer[Constants::LINE_LENGTH];
     uint lineNumber = LineNumber();
-    Instruction::opcodes_e opcode = (Instruction::opcodes_e) Opcode();
+    Instruction::opcodes_e opcode = static_cast<Instruction::opcodes_e>(Opcode());
+
     if ((opcode == Instruction::CMP) || (opcode == Instruction::HALT))
     {
-        snprintf(disassembly, Constants::LINE_LENGTH, "%s", Instructions::Mnemonic(opcode));
+        snprintf(buffer, sizeof(buffer), "%s", Instructions::Mnemonic(opcode));
     }
     else
     {
-        snprintf(disassembly, Constants::LINE_LENGTH, "%s %d", Instructions::Mnemonic(opcode), lineNumber);
+        snprintf(buffer, sizeof(buffer), "%s %d", Instructions::Mnemonic(opcode), lineNumber);
     }
 
-    return (disassembly);
+    return (string(buffer));
 }
