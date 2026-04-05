@@ -26,3 +26,7 @@ CONFIG_COMPILER_CXX_EXCEPTIONS_EMG_POOL_SIZE=0
 
 # File system related configuration.
 CONFIG_FATFS_LFN_HEAP=y
+
+# Turn off the idle task watchdogs.
+# CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0 is not set
+# CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1 is not set

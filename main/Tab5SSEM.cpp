@@ -25,6 +25,8 @@
 #include "Touch.hpp"
 #include <string>
 #include <vector>
+
+#include "CPU.hpp"
 #include "StoreLines.hpp"
 #include "Compiler.hpp"
 #include "Instructions.hpp"
@@ -245,15 +247,20 @@ extern "C" void app_main(void)
         }
     }
 
-    while (true)
+    Cpu *cpu = new Cpu(storeLines);
+    cpu->Reset();
+    uint32_t instructionCount = 0;
+    while (!cpu->IsStopped())
     {
+        cpu->SingleStep();
+        instructionCount++;
         for (int i = 0; i < Display::STORELINE_COUNT; ++i)
         {
             message.storelineValues[i] = storeLines[i].GetValue();
-            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", storeLines[i].Disassemble().c_str());
+            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s      ", storeLines[i].Disassemble().c_str());
         }
 
         Display::PostMessage(message);
-        vTaskDelay(pdMS_TO_TICKS(10));
     }
+    ESP_LOGI(LOG_TAG, "Program execution completed. Instructions executed=%u, PI=%d, CI=%d, Accumulator=%d", instructionCount, cpu->PI().GetValue(), cpu->CI().GetValue(), cpu->Accumulator().GetValue());
 }
