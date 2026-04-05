@@ -5,26 +5,14 @@
  *
  * @param size Number of lines in this object.
  */
-StoreLines::StoreLines(uint size)
+StoreLines::StoreLines(uint size) : _lines(size)
 {
-    _lines.resize(size);
-    for (auto &line: _lines)
-    {
-        line = Register();
-    }
 }
 
 /**
  * @brief Destroy the StoreLines object
  */
-StoreLines::~StoreLines()
-{
-    for (auto line: _lines)
-    {
-        line.~Register();
-    }
-    _lines.clear();
-}
+StoreLines::~StoreLines() = default;
 
 /**
  * @brief Get a reference to a store line.

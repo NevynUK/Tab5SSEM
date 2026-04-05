@@ -1,12 +1,11 @@
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "Instruction.hpp"
 #include "Instructions.hpp"
 #include "Compiler.hpp"
-#include "FileSystem.hpp"
 #include "Constants.hpp"
 
 using namespace std;
@@ -27,32 +26,12 @@ void Compiler::CleanUp(vector<Compiler::TokenisedLine *> *tokens)
 }
 
 /**
- * @brief Read a file from the file system and compile the contents returning the
- *        compiled program as store lines.
+ * @brief Compile the program contained in the vector of strings.
  *
- * @param filename Name of the file to be read.
- * @return StoreLines* StoreLines containing the compiled program.
+ * @param program Vector containing lines of text to be compiled.
+ * @return StoreLines StoreLines containing the compiled program.
  */
-StoreLines *Compiler::Compile(const char *filename)
-{
-    vector<const char *> *program = FileSystem::Contents(filename);
-    StoreLines *result = Compile(*program);
-
-    for (auto line: *program)
-    {
-        free((void *) line);
-    }
-    delete program;
-    return (result);
-}
-
-/**
- * @brief Compile the program contained in the vector of const char * pointers.
- *
- * @param program Vector containing char * lines of text to be compiled.
- * @return StoreLines* StoreLines containing the compiled program.
- */
-StoreLines *Compiler::Compile(const vector<const char *> &program)
+StoreLines Compiler::Compile(const vector<string> &program)
 {
     if (program.size() == 0)
     {
@@ -60,8 +39,8 @@ StoreLines *Compiler::Compile(const vector<const char *> &program)
     }
 
     vector<Compiler::TokenisedLine *> *tokens = Tokenise(program);
-    StoreLines *storeLines = new StoreLines();
-    StoreLines &sl = *storeLines;
+    StoreLines storeLines;
+
     if (tokens->size() > 0)
     {
         try
@@ -78,13 +57,12 @@ StoreLines *Compiler::Compile(const vector<const char *> &program)
                     value = token->opcode << Constants::OPCODE_SHIFT;
                     value |= (token->operand & Constants::LINE_NUMBER_MASK);
                 }
-                sl[token->storeLineNumber].SetValue(value);
+                storeLines[token->storeLineNumber].SetValue(value);
             }
         }
         catch (const std::exception &e)
         {
             CleanUp(tokens);
-            delete storeLines;
             throw e;
         }
     }
@@ -101,60 +79,86 @@ StoreLines *Compiler::Compile(const vector<const char *> &program)
  * @param lines Vector containing the lines of text
  * @return vector<Compiler::TokenisedLine *>* Tokenised lines.
  */
-vector<Compiler::TokenisedLine *> *Compiler::Tokenise(const vector<const char *> &lines)
+vector<Compiler::TokenisedLine *> *Compiler::Tokenise(const vector<string> &lines)
 {
     vector<Compiler::TokenisedLine *> *result = new vector<Compiler::TokenisedLine *>();
 
     try
     {
-        for (auto line: lines)
+        for (const string &line: lines)
         {
-            char copyOfLine[Constants::LINE_LENGTH];
-            strcpy(copyOfLine, line);
-            char *text = strtok(copyOfLine, " ");
-            while (text != NULL)
+            if (IsBlank(line) || IsComment(line))
             {
-                if (IsBlank(line) || IsComment(line))
+                continue;
+            }
+
+            // Split the line into space-delimited tokens, stopping at a comment marker
+            vector<string> tokens;
+            size_t position = 0;
+
+            while (position < line.size())
+            {
+                while ((position < line.size()) && (line[position] == ' '))
+                {
+                    position++;
+                }
+                if (position >= line.size())
                 {
                     break;
                 }
-                uint32_t storeLineNumber = GetStoreLineNumber(text);
-                text = strtok(NULL, " ");
-                Instruction::opcodes_e opcode = Instructions::Opcode(text);
-                text = strtok(NULL, " ");
-                uint32_t operand = 0;
-                switch (opcode)
+                const size_t start = position;
+                while ((position < line.size()) && (line[position] != ' '))
                 {
-                    case Instruction::JMP:
-                    case Instruction::JPR:
-                    case Instruction::LDN:
-                    case Instruction::STO:
-                    case Instruction::SUB:
-                    case Instruction::NUM:
-                        operand = GetOperand(text);
-                        break;
-                    case Instruction::BIN:
-                        operand = GetBinary(text);
-                        break;
-                    default:
-                        if (!(IsBlank(text) || IsComment(text)))
-                        {
-                            throw runtime_error("Unexpected operand");
-                        }
-                        break;
+                    position++;
                 }
-                text = strtok(NULL, " ");
-                if (!(IsBlank(text) || IsComment(text)))
+                const string token = line.substr(start, position - start);
+                if (IsComment(token))
                 {
-                    throw runtime_error("Unexpected text");
+                    break;
                 }
-                text = NULL;
-                TokenisedLine *tokenisedLine = new TokenisedLine();
-                tokenisedLine->storeLineNumber = storeLineNumber;
-                tokenisedLine->opcode = opcode;
-                tokenisedLine->operand = operand;
-                result->push_back(tokenisedLine);
+                tokens.push_back(token);
             }
+
+            if (tokens.empty())
+            {
+                continue;
+            }
+
+            uint32_t storeLineNumber = GetStoreLineNumber(tokens[0]);
+            Instruction::opcodes_e opcode = Instructions::Opcode(tokens.size() > 1 ? tokens[1] : "");
+            uint32_t operand = 0;
+
+            switch (opcode)
+            {
+                case Instruction::JMP:
+                case Instruction::JPR:
+                case Instruction::LDN:
+                case Instruction::STO:
+                case Instruction::SUB:
+                case Instruction::NUM:
+                    operand = GetOperand(tokens.size() > 2 ? tokens[2] : "");
+                    break;
+                case Instruction::BIN:
+                    operand = GetBinary(tokens.size() > 2 ? tokens[2] : "");
+                    break;
+                default:
+                    if (tokens.size() > 3)
+                    {
+                        throw runtime_error("Unexpected operand");
+                    }
+                    break;
+            }
+
+            if (tokens.size() > 3)
+            {
+                throw runtime_error("Unexpected text");
+            }
+
+            TokenisedLine *tokenisedLine = new TokenisedLine();
+            tokenisedLine->storeLineNumber = storeLineNumber;
+            tokenisedLine->opcode = opcode;
+            tokenisedLine->operand = operand;
+            result->push_back(tokenisedLine);
         }
     }
     catch (const std::exception &e)
@@ -173,39 +177,26 @@ vector<Compiler::TokenisedLine *> *Compiler::Tokenise(const vector<const char *>
  * @return uint32_t StoreLine number for this line.
  * @throws runtime_error If the line number is invalid.
  */
-uint32_t Compiler::GetStoreLineNumber(const char *line)
+uint32_t Compiler::GetStoreLineNumber(const string &line)
 {
-    uint32_t result = 0;
-    bool state = false;
-
-    if ((line != NULL) && (strlen(line) > 0))
-    {
-        char *copyOfLine = strdup(line);
-        if (copyOfLine == NULL)
-        {
-            throw runtime_error("Memory allocation failed");
-        }
-        if (copyOfLine[strlen(copyOfLine) - 1] == ':')
-        {
-            copyOfLine[strlen(line) - 1] = '\0';
-            if (IsNumber(copyOfLine))
-            {
-                long number = strtol(copyOfLine, NULL, 10);
-                if ((number >= 0) && (number <= UINT32_MAX))
-                {
-                    result = number;
-                    state = true;
-                }
-            }
-        }
-        free(copyOfLine);
-    }
-    if (!state)
+    if (line.empty() || line.back() != ':')
     {
         throw runtime_error("Invalid store line number");
     }
 
-    return (result);
+    const string numberPart = line.substr(0, line.size() - 1);
+    if (!IsNumber(numberPart))
+    {
+        throw runtime_error("Invalid store line number");
+    }
+
+    long number = strtol(numberPart.c_str(), nullptr, 10);
+    if ((number < 0) || (static_cast<unsigned long>(number) > UINT32_MAX))
+    {
+        throw runtime_error("Invalid store line number");
+    }
+
+    return (static_cast<uint32_t>(number));
 }
 
 /**
@@ -215,29 +206,20 @@ uint32_t Compiler::GetStoreLineNumber(const char *line)
  * @return uint32_t Opcode representing the text.
  * @throws runtime_error If the opcode is invalid or the value is out of range.
  */
-int32_t Compiler::GetOperand(const char *line)
+int32_t Compiler::GetOperand(const string &line)
 {
-    long number = 0;
-    bool state = false;
-
-    if ((line != NULL) && (strlen(line) > 0))
-    {
-        if (IsNumber(line))
-        {
-            number = strtol(line, NULL, 10);
-            if ((number > INT32_MAX) || (number < INT32_MIN))
-            {
-                throw runtime_error("Operand out of range");
-            }
-            state = true;
-        }
-    }
-    if (!state)
+    if (line.empty() || !IsNumber(line))
     {
         throw runtime_error("Invalid operand");
     }
 
-    return ((int32_t) number);
+    long number = strtol(line.c_str(), nullptr, 10);
+    if ((number > INT32_MAX) || (number < INT32_MIN))
+    {
+        throw runtime_error("Operand out of range");
+    }
+
+    return (static_cast<int32_t>(number));
 }
 
 /**
@@ -247,25 +229,14 @@ int32_t Compiler::GetOperand(const char *line)
  * @return uint32_t Number represented by the value.
  * @throws runtime_error If the value is not a binary number
  */
-uint32_t Compiler::GetBinary(const char *line)
+uint32_t Compiler::GetBinary(const string &line)
 {
-    uint32_t number = 0;
-    bool state = false;
-
-    if ((line != NULL) && (strlen(line) > 0))
-    {
-        if (IsBinary(line))
-        {
-            number = strtoul(line, NULL, 2) & 0xffffffff;
-            state = true;
-        }
-    }
-    if (!state)
+    if (line.empty() || !IsBinary(line))
     {
         throw runtime_error("Invalid binary number");
     }
 
-    return (number);
+    return (static_cast<uint32_t>(strtoul(line.c_str(), nullptr, 2) & 0xffffffff));
 }
 
 /**
@@ -275,9 +246,9 @@ uint32_t Compiler::GetBinary(const char *line)
  * @return true If the text represents a comment.
  * @return false If the text is not a comment.
  */
-bool Compiler::IsComment(const char *line)
+bool Compiler::IsComment(const string &line)
 {
-    return ((line != NULL) && ((line[0] == ';') || ((strlen(line) >= 3) && (strncmp(line, "---", 3) == 0))));
+    return (!line.empty() && ((line[0] == ';') || (line.size() >= 3 && line.compare(0, 3, "---") == 0)));
 }
 
 /**
@@ -287,30 +258,31 @@ bool Compiler::IsComment(const char *line)
  * @return true If the text could be a number.
  * @return false If the text contains non-digit characters.
  */
-bool Compiler::IsNumber(const char *line)
+bool Compiler::IsNumber(const string &line)
 {
-    if ((line == NULL) || (strlen(line) == 0))
+    if (line.empty())
     {
         return (false);
     }
 
-    for (size_t index = 0; index < strlen(line); index++)
+    for (size_t index = 0; index < line.size(); ++index)
     {
         if (index == 0)
         {
-            if ((line[0] != '-') && (line[0] != '+') && (!isdigit(line[0])))
+            if ((line[0] != '-') && (line[0] != '+') && (!isdigit(static_cast<unsigned char>(line[0]))))
             {
                 return (false);
             }
         }
         else
         {
-            if (!isdigit(line[index]))
+            if (!isdigit(static_cast<unsigned char>(line[index])))
             {
                 return (false);
             }
         }
     }
+
     return (true);
 }
 
@@ -321,9 +293,9 @@ bool Compiler::IsNumber(const char *line)
  * @return true If the line is blank.
  * @return false If the line is not blank.
  */
-bool Compiler::IsBlank(const char *line)
+bool Compiler::IsBlank(const string &line)
 {
-    return ((line == NULL) || (strlen(line) == 0));
+    return (line.empty());
 }
 
 /**
@@ -333,18 +305,20 @@ bool Compiler::IsBlank(const char *line)
  * @return true If the text is binary.
  * @return false If the text is not binary.
  */
-bool Compiler::IsBinary(const char *line)
+bool Compiler::IsBinary(const string &line)
 {
-    if ((line == NULL) || (strlen(line) == 0) || (strlen(line) > 32))
+    if (line.empty() || line.size() > 32)
     {
         return (false);
     }
-    for (size_t index = 0; index < strlen(line); index++)
+
+    for (const char character: line)
     {
-        if ((line[index] != '0') && (line[index] != '1'))
+        if ((character != '0') && (character != '1'))
         {
             return (false);
         }
     }
+
     return (true);
 }
