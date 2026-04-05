@@ -39,20 +39,32 @@ public:
     /**
      * @brief Get the iterator for the beginning of the store lines.
      */
-    auto begin() { return _lines.begin(); }
+    auto begin()
+    {
+        return _lines.begin();
+    }
 
     /**
      * @brief Get the iterator for the end of the store lines.
      */
-    auto end() { return _lines.end(); }
+    auto end()
+    {
+        return _lines.end();
+    }
 
     /**
      * @brief Get the const iterator for the beginning of the store lines.
      */
-    auto begin() const { return _lines.begin(); }
+    auto begin() const
+    {
+        return _lines.begin();
+    }
 
     /**
      * @brief Get the const iterator for the end of the store lines.
      */
-    auto end() const { return _lines.end(); }
+    auto end() const
+    {
+        return _lines.end();
+    }
 };

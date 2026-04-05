@@ -85,7 +85,7 @@ vector<Compiler::TokenisedLine *> *Compiler::Tokenise(const vector<string> &line
 
     try
     {
-        for (const string &line : lines)
+        for (const string &line: lines)
         {
             if (IsBlank(line) || IsComment(line))
             {
@@ -312,7 +312,7 @@ bool Compiler::IsBinary(const string &line)
         return (false);
     }
 
-    for (const char character : line)
+    for (const char character: line)
     {
         if ((character != '0') && (character != '1'))
         {

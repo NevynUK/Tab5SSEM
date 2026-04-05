@@ -224,7 +224,7 @@ extern "C" void app_main(void)
 
         ESP_LOGI(LOG_TAG, "Attempting to read file: %s", targetFile.c_str());
         vector<string> fileContents = ReadSdCardFileContents(targetFile);
-        for (const auto &line : fileContents)
+        for (const auto &line: fileContents)
         {
             ESP_LOGI(LOG_TAG, "    %s", line.c_str());
         }
