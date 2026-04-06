@@ -289,7 +289,11 @@ void Display::DrawStoreline(int lineIndex)
     _display->drawString(hexValue, TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING, ledCentreY);
 
     // Draw the mnemonic text label to the right of the hex column
-    _display->drawString(_labels[lineIndex], TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING + HEX_COLUMN_WIDTH, ledCentreY);
+    const int labelX = TEXT_SECTION_X + TEXT_LEFT_MARGIN + BOX_PADDING + HEX_COLUMN_WIDTH;
+    const int labelWidth = TEXT_SECTION_WIDTH - TEXT_LEFT_MARGIN - HEX_COLUMN_WIDTH - 1;
+    _display->fillRect(labelX, rowY + 1, labelWidth, rowHeight - 2, TFT_BLACK);
+
+    _display->drawString(_labels[lineIndex], labelX, ledCentreY);
 }
 
 /**

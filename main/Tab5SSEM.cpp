@@ -272,7 +272,7 @@ extern "C" void app_main(void)
         for (int i = 0; i < Display::STORELINE_COUNT; ++i)
         {
             message.storelineValues[i] = storeLines[i].GetValue();
-            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s      ", storeLines[i].Disassemble().c_str());
+            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", storeLines[i].Disassemble().c_str());
         }
 
         Display::PostMessage(message);
