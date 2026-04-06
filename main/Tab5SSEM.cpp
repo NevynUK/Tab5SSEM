@@ -92,7 +92,7 @@ void Setup(void)
  *
  * @param storeLines Store lines to be displayed.
  */
-void UpdateDisplayTube(StoreLines & storeLines)
+void UpdateDisplayTube(StoreLines &storeLines)
 {
     ESP_LOGI(LOG_TAG, "                   00000000001111111111222222222233");
     ESP_LOGI(LOG_TAG, "                   01234567890123456789012345678901");
@@ -103,7 +103,6 @@ void UpdateDisplayTube(StoreLines & storeLines)
         ESP_LOGI(LOG_TAG, "%4d: 0x%08x - %32s %-16s ; %d", lineNumber, (uint) storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int) storeLines[lineNumber].GetValue());
     }
 }
-
 
 /**
  * @brief Read the names of all SSEM program files on the SD card.
