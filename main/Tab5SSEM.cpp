@@ -27,9 +27,9 @@
 #include "Rtc.hpp"
 #include "SDCard.hpp"
 #include "Touch.hpp"
-#include "ControlPanel.hpp"
 
 #include "CPU.hpp"
+
 #include "StoreLines.hpp"
 #include "Compiler.hpp"
 #include "Instructions.hpp"
@@ -244,7 +244,7 @@ extern "C" void app_main(void)
     if (sdCard != nullptr && sdCard->IsMounted())
     {
         vector<string> filenames = ReadSdCardFileNames();
-        ControlPanel::SetFiles(filenames);
+        Display::SetFiles(filenames);
         string targetFile = "hfr989.ssem";
 
         ESP_LOGI(LOG_TAG, "Attempting to read file: %s", targetFile.c_str());
