@@ -18,37 +18,59 @@
 // Static member definitions
 // ---------------------------------------------------------------------------
 
-/** @brief Pointer to the global M5GFX display instance; assigned by Initialise(). */
+/**
+ * @brief Pointer to the global M5GFX display instance; assigned by Initialise().
+ */
 M5GFX *ControlPanel::_display = nullptr;
 
-/** @brief true while the SSEM CPU is executing a program. */
+/**
+ * @brief true while the SSEM CPU is executing a program.
+ */
 bool ControlPanel::_running = false;
 
-/** @brief Currently selected execution speed; defaults to Maximum. */
+/**
+ * @brief Currently selected execution speed; defaults to Maximum.
+ */
 ControlPanel::SpeedSetting ControlPanel::_speedSetting = ControlPanel::SpeedSetting::Maximum;
 
-/** @brief Ordered list of loadable SSEM program file paths. */
+/**
+ * @brief Ordered list of loadable SSEM program file paths.
+ */
 std::vector<std::string> ControlPanel::_files;
 
-/** @brief Zero-based index of the selected file; −1 when none is selected. */
+/**
+ * @brief Zero-based index of the selected file; −1 when none is selected.
+ */
 int ControlPanel::_selectedFile = -1;
 
-/** @brief Index of the first file visible at the top of the list. */
+/**
+ * @brief Index of the first file visible at the top of the list.
+ */
 int ControlPanel::_scrollOffset = 0;
 
-/** @brief true when the Load button is enabled. */
+/**
+ * @brief true when the Load button is enabled.
+ */
 bool ControlPanel::_loadEnabled = false;
 
-/** @brief true when the Stop/Run button is enabled. */
+/**
+ * @brief true when the Stop/Run button is enabled.
+ */
 bool ControlPanel::_stopRunEnabled = false;
 
-/** @brief Previous touch active state used to detect press edges. */
+/**
+ * @brief Previous touch active state used to detect press edges.
+ */
 bool ControlPanel::_prevTouched = false;
 
-/** @brief Registered callback for the Stop/Run button; empty by default. */
+/**
+ * @brief Registered callback for the Stop/Run button; empty by default.
+ */
 ControlPanel::StopRunCallback ControlPanel::_stopRunCallback = nullptr;
 
-/** @brief Registered callback for the Load button; empty by default. */
+/**
+ * @brief Registered callback for the Load button; empty by default.
+ */
 ControlPanel::LoadCallback ControlPanel::_loadCallback = nullptr;
 
 // ---------------------------------------------------------------------------
