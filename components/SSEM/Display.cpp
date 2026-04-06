@@ -102,7 +102,6 @@ Display::LoadCallback Display::_loadCallback = nullptr;
  */
 QueueHandle_t Display::_queue = nullptr;
 
-
 // ---------------------------------------------------------------------------
 // Public methods
 // ---------------------------------------------------------------------------
@@ -237,7 +236,6 @@ void Display::SetLoadCallback(LoadCallback callback)
     _loadCallback = callback;
 }
 
-
 // ---------------------------------------------------------------------------
 // Private methods
 // ---------------------------------------------------------------------------
@@ -330,7 +328,6 @@ void Display::ShowMain()
 
     _display->display();
 }
-
 
 /**
  * @brief Draws the header banner across the top of the screen.

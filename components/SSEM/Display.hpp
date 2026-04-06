@@ -48,8 +48,7 @@ public:
     /**
      * @brief Selectable SSEM execution speed mode.
      */
-    enum class SpeedSetting
-    {
+    enum class SpeedSetting {
         /**
          * @brief Run as fast as the hardware allows.
          */
