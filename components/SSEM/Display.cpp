@@ -11,6 +11,7 @@
  *---------------------------------------------------------------------------*/
 
 #include "Display.hpp"
+#include "ControlPanel.hpp"
 #include "Touch.hpp"
 #include <cstdio>
 #include <inttypes.h>
@@ -82,6 +83,9 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
 
     ShowSplash(sdCard);
     ShowMain();
+
+    ControlPanel::Initialise(*_display);
+    ControlPanel::Draw();
 
     _queue = xQueueCreate(4, sizeof(DisplayMessage));
     xTaskCreate(DisplayTask, "DisplayTask", 8192, nullptr, 5, nullptr);

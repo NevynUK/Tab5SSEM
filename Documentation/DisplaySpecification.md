@@ -103,16 +103,42 @@ The Display task blocks on `xQueueReceive`.  On each message received it:
 
 ## Control Panel
 
-### File Selection
+The control panel is the remaining area on the right of the screen.  The following controls / features are on the control panel starting at the top of the panel.  They will appear in the order presented.
 
-Add a button to the Control Panel with the label `Load`.
+### Halted / Running Indicator
 
-When load is pressed a new dialog is displayed.  The dialog should be a file browse dialog containing a scrollable list of files, and OK button and a Cancel button.
+The top of the screen will contain a white rounded rectangle.  The rectangle can contain the word Running (green text) or Halted (red text).  The contents can be changed with a API that takes a boolean running.
 
-Pressing cancel closed the dialog and restores the display.
+### Speed Radio Button
 
-The scrollable list contains a list of files on the SD Card.
+A speed button shall be available.  This should be two radio buttons with the options Maximum and original.  The value will be available through an API that returns an enum representing the speed.  The default on startup is maximum.
 
-Pressing OK with no file selected does nothing.
+### Files
 
-Pressing OK with a file selected executes a callback in the Tab5Template.cpp file.  The callback updates the header with the file name.
+A scrollable list box will display a list of files.  The files shall be passed to an API as a vector<string> reference object.
+
+### Load File Button and Stop / Run Button
+
+Two buttons shall be displayed as a rounded rectangular button:
+
+- Load
+- Stop / Run
+
+The buttons shall have a white text on a black background and a white border when enabled.  The white text and border shall be grey when the button is disabled.
+
+The enabled state for a button is changed through an API for each button.
+
+#### Load Button
+
+The load button can only be enabled when:
+
+- No program is running
+- A file has been selected.
+
+#### Stop / Run Button
+
+This button is only enabled when a file has been selected.
+
+The button will raise a callback.
+
+An API allows the state to be changed.
