@@ -14,6 +14,8 @@
 #include "Touch.hpp"
 #include <cstdio>
 
+using namespace std;
+
 // ---------------------------------------------------------------------------
 // Static member definitions
 // ---------------------------------------------------------------------------
@@ -36,7 +38,7 @@ ControlPanel::SpeedSetting ControlPanel::_speedSetting = ControlPanel::SpeedSett
 /**
  * @brief Ordered list of loadable SSEM program file paths.
  */
-std::vector<std::string> ControlPanel::_files;
+vector<string> ControlPanel::_files;
 
 /**
  * @brief Zero-based index of the selected file; −1 when none is selected.
@@ -136,7 +138,7 @@ void ControlPanel::SetRunning(bool running)
  *
  * @param files  Ordered vector of full file paths to display.
  */
-void ControlPanel::SetFiles(const std::vector<std::string> &files)
+void ControlPanel::SetFiles(const vector<string> &files)
 {
     _files = files;
     _selectedFile = -1;
@@ -203,7 +205,7 @@ void ControlPanel::SetStopRunCallback(StopRunCallback callback)
  * The callback is invoked with the full path of the selected file when
  * the Load button is pressed.
  *
- * @param callback  Callable accepting a const std::string reference (file path).
+ * @param callback  Callable accepting a const string reference (file path).
  */
 void ControlPanel::SetLoadCallback(LoadCallback callback)
 {
@@ -348,7 +350,7 @@ void ControlPanel::DrawFileList()
             _display->fillRect(PANEL_X + 1, itemY, PANEL_WIDTH - 2, LIST_ITEM_HEIGHT, bgColour);
 
             char nameBuffer[40];
-            const std::string name = Basename(_files[fileIndex]);
+            const string name = Basename(_files[fileIndex]);
             snprintf(nameBuffer, sizeof(nameBuffer), "%s", name.c_str());
 
             _display->setTextColor(textColour, bgColour);
@@ -575,10 +577,10 @@ bool ControlPanel::HitTest(int touchX, int touchY, int x, int y, int width, int 
  * is present the full string is returned unchanged.
  *
  * @param path  Full file path, e.g. "/sdcard/program.ssem".
- * @return std::string  The filename portion, e.g. "program.ssem".
+ * @return string  The filename portion, e.g. "program.ssem".
  */
-std::string ControlPanel::Basename(const std::string &path)
+string ControlPanel::Basename(const string &path)
 {
     const size_t pos = path.rfind('/');
-    return (pos != std::string::npos) ? path.substr(pos + 1) : path;
+    return (pos != string::npos) ? path.substr(pos + 1) : path;
 }

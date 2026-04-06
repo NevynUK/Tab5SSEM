@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 /**
  * @brief SSEM emulator control panel.
  *
@@ -54,20 +56,20 @@ public:
      * The bool argument is the new intended running state:
      * true = the user wants to start execution, false = stop.
      */
-    using StopRunCallback = std::function<void(bool running)>;
+    using StopRunCallback = function<void(bool running)>;
 
     /**
      * @brief Callback type invoked when the Load button is pressed.
      *
      * The string argument is the full path of the currently selected file.
      */
-    using LoadCallback = std::function<void(const std::string &filename)>;
+    using LoadCallback = function<void(const string &filename)>;
 
     static void Initialise(M5GFX &display);
     static void Draw();
 
     static void SetRunning(bool running);
-    static void SetFiles(const std::vector<std::string> &files);
+    static void SetFiles(const vector<string> &files);
     static void SetLoadEnabled(bool enabled);
     static void SetStopRunEnabled(bool enabled);
 
@@ -86,7 +88,7 @@ private:
     static void OnPanelTouch(const lgfx::touch_point_t *points, int count);
     static void HandlePress(int touchX, int touchY);
     static bool HitTest(int touchX, int touchY, int x, int y, int width, int height);
-    static std::string Basename(const std::string &path);
+    static string Basename(const string &path);
 
     // -----------------------------------------------------------------------
     // State
@@ -110,7 +112,7 @@ private:
     /**
      * @brief Ordered list of loadable SSEM program file paths.
      */
-    static std::vector<std::string> _files;
+    static vector<string> _files;
 
     /**
      * @brief Zero-based index of the selected file; −1 when none is selected.
