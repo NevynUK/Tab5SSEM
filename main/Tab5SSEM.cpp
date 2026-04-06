@@ -250,6 +250,8 @@ extern "C" void app_main(void)
     Cpu *cpu = new Cpu(storeLines);
     cpu->Reset();
     uint32_t instructionCount = 0;
+    struct timespec start;
+    clock_gettime(CLOCK_REALTIME, &start);
     while (!cpu->IsStopped())
     {
         cpu->SingleStep();
@@ -262,5 +264,8 @@ extern "C" void app_main(void)
 
         Display::PostMessage(message);
     }
-    ESP_LOGI(LOG_TAG, "Program execution completed. Instructions executed=%u, PI=%d, CI=%d, Accumulator=%d", instructionCount, cpu->PI().GetValue(), cpu->CI().GetValue(), cpu->Accumulator().GetValue());
+    struct timespec end;
+    clock_gettime(CLOCK_REALTIME, &end);
+    double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+    ESP_LOGI(LOG_TAG, "Program execution completed. Instructions executed=%u, Elapsed time=%.6f seconds", instructionCount, elapsedTime);
 }
