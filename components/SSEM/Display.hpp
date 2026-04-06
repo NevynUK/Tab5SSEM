@@ -157,12 +157,12 @@ private:
     /**
      * @brief SSEM store — 32 unsigned 32-bit words, all zero initially (JP 0).
      */
-    static uint32_t _store[32];
+    static uint32_t _store[Display::STORELINE_COUNT];
 
     /**
      * @brief Text label shown to the right of each storeline, initially "JP 0".
      */
-    static char _labels[32][32];
+    static char _labels[Display::STORELINE_COUNT][32];
 
     // Control panel state
     static bool _running;
