@@ -25,6 +25,8 @@
 #include "Touch.hpp"
 #include <string>
 #include <vector>
+
+#include "CPU.hpp"
 #include "StoreLines.hpp"
 #include "Compiler.hpp"
 #include "Instructions.hpp"
@@ -217,6 +219,7 @@ extern "C" void app_main(void)
 
     message.controlState = nullptr;
     Display::PostMessage(message);
+    StoreLines storeLines;
 
     if (sdCard != nullptr && sdCard->IsMounted())
     {
@@ -230,7 +233,7 @@ extern "C" void app_main(void)
         }
         if (!fileContents.empty())
         {
-            StoreLines storeLines = Compiler::Compile(fileContents);
+            storeLines = Compiler::Compile(fileContents);
             ESP_LOGI(LOG_TAG, "Contents of %s:", targetFile.c_str());
             uint32_t lineNumber = 0;
             for (const auto &line: storeLines)
@@ -244,20 +247,20 @@ extern "C" void app_main(void)
         }
     }
 
-    // Count from 0 upward, setting every storeline to the current count value,
-    // and post a display update every second.
-    uint32_t count = 0U;
-
-    while (true)
+    Cpu *cpu = new Cpu(storeLines);
+    cpu->Reset();
+    uint32_t instructionCount = 0;
+    while (!cpu->IsStopped())
     {
+        cpu->SingleStep();
+        instructionCount++;
         for (int i = 0; i < Display::STORELINE_COUNT; ++i)
         {
-            message.storelineValues[i] = count;
+            message.storelineValues[i] = storeLines[i].GetValue();
+            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s      ", storeLines[i].Disassemble().c_str());
         }
 
         Display::PostMessage(message);
-        vTaskDelay(pdMS_TO_TICKS(10));
-
-        ++count;
     }
+    ESP_LOGI(LOG_TAG, "Program execution completed. Instructions executed=%u, PI=%d, CI=%d, Accumulator=%d", instructionCount, cpu->PI().GetValue(), cpu->CI().GetValue(), cpu->Accumulator().GetValue());
 }
