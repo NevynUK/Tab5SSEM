@@ -14,6 +14,7 @@
 #include "SDCard.hpp"
 
 #include <cstring>
+#include <inttypes.h>
 #include <esp_log.h>
 #include <esp_ldo_regulator.h>
 
@@ -81,7 +82,7 @@ SDCard::SDCard() : _card(nullptr), _powerControlHandle(nullptr), _mounted(false)
     esp_err_t result = esp_ldo_acquire_channel(&ldoConfig, &_powerControlHandle);
     if (result != ESP_OK)
     {
-        ESP_LOGE(LOG_TAG, "Failed to acquire on-chip LDO channel %d: %s", SD_LDO_CHANNEL, esp_err_to_name(result));
+        ESP_LOGE(LOG_TAG, "Failed to acquire on-chip LDO channel %" PRId32 ": %s", (int32_t) SD_LDO_CHANNEL, esp_err_to_name(result));
         return;
     }
 
