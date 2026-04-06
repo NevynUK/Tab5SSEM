@@ -13,6 +13,7 @@
 #include <M5GFX.h>
 #include <cstdio>
 #include <ctime>
+#include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -100,7 +101,7 @@ void UpdateDisplayTube(StoreLines &storeLines)
     {
         const string binary = storeLines[lineNumber].Binary();
         const string disassembled = storeLines[lineNumber].Disassemble();
-        ESP_LOGI(LOG_TAG, "%4d: 0x%08x - %32s %-16s ; %d", lineNumber, (uint) storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int) storeLines[lineNumber].GetValue());
+        ESP_LOGI(LOG_TAG, "%4" PRIu32 ": 0x%08" PRIx32 " - %32s %-16s ; %" PRId32, (uint32_t)lineNumber, (uint32_t)storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int32_t)storeLines[lineNumber].GetValue());
     }
 }
 
@@ -276,7 +277,7 @@ extern "C" void app_main(void)
 
         Display::PostMessage(message);
     }
-    ESP_LOGI(LOG_TAG, "CPU execution stopped after %u instructions.", instructionCount);
+    ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
     UpdateDisplayTube(storeLines);
     struct timespec end;
     clock_gettime(CLOCK_REALTIME, &end);

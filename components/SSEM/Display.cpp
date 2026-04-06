@@ -13,6 +13,7 @@
 #include "Display.hpp"
 #include "Touch.hpp"
 #include <cstdio>
+#include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <freertos/task.h>
@@ -262,7 +263,7 @@ void Display::DrawStoreline(int lineIndex)
 
     // Draw the storeline index number to the left of the LED box (outside it)
     char lineNumber[4];
-    snprintf(lineNumber, sizeof(lineNumber), "%d", lineIndex);
+    snprintf(lineNumber, sizeof(lineNumber), "%" PRId32, (int32_t)lineIndex);
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_right);
@@ -281,7 +282,7 @@ void Display::DrawStoreline(int lineIndex)
 
     // Draw the zero-padded 8-digit hex value of the storeline word
     char hexValue[9];
-    snprintf(hexValue, sizeof(hexValue), "%08lX", value);
+    snprintf(hexValue, sizeof(hexValue), "%08" PRIX32, value);
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_left);
