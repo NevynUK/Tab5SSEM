@@ -16,6 +16,11 @@
 #include "SDCard.hpp"
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <functional>
+#include <string>
+#include <vector>
+
+using namespace std;
 
 /**
  * @brief SSEM emulator display controller.
@@ -23,7 +28,7 @@
  * Static class that manages the entire display pipeline for the SSEM
  * Manchester Baby emulator.  Owns the splash screen lifecycle, the main
  * interface layout (header, footer, storeline LED grid, storeline labels,
- * and blank control panel), and the associated touch callbacks.
+ * and control panel), and the associated touch callbacks.
  *
  * All state is held in static members so that registered touch callbacks
  * (which are plain function pointers) can reach the display context without
@@ -39,6 +44,35 @@ public:
      * @brief Number of storelines in the SSEM store.
      */
     static constexpr int STORELINE_COUNT = 32;
+
+    /**
+     * @brief Selectable SSEM execution speed mode.
+     */
+    enum class SpeedSetting {
+        /**
+         * @brief Run as fast as the hardware allows.
+         */
+        Maximum,
+        /**
+         * @brief Simulate original 1948 Manchester Baby clock rate.
+         */
+        Original
+    };
+
+    /**
+     * @brief Callback type invoked when the Stop/Run button is pressed.
+     *
+     * The bool argument is the new intended running state:
+     * true = the user wants to start execution, false = stop.
+     */
+    using StopRunCallback = function<void(bool running)>;
+
+    /**
+     * @brief Callback type invoked when the Load button is pressed.
+     *
+     * The string argument is the full path of the currently selected file.
+     */
+    using LoadCallback = function<void(const string &filename)>;
 
     /**
      * @brief Message sent to the Display task via the message queue.
@@ -67,15 +101,42 @@ public:
     static void Run(M5GFX &display, SDCard *sdCard);
     static bool PostMessage(const DisplayMessage &message);
 
+    static void SetRunning(bool running);
+    static void SetFiles(const vector<string> &files);
+    static void SetLoadEnabled(bool enabled);
+    static void SetStopRunEnabled(bool enabled);
+
+    static SpeedSetting GetSpeed();
+
+    static void SetStopRunCallback(StopRunCallback callback);
+    static void SetLoadCallback(LoadCallback callback);
+
 private:
     static void ShowSplash(SDCard *sdCard);
     static void ShowMain();
     static void DrawHeader();
     static void DrawFooter();
+
+    // Storeline grid methods
     static void DrawAllStorelines();
     static void DrawStoreline(int lineIndex);
     static void DrawLed(int centreX, int centreY, int radius, bool on);
+
+    // Control panel methods
+    static void DrawControlPanel();
+    static void DrawRunningIndicator();
+    static void DrawSpeedSection();
+    static void DrawFileList();
+    static void DrawActionButtons();
+    static void DrawButton(int x, int y, int width, int height, const char *label, bool enabled);
+
+    // Touch handling
     static void OnSplashTouch(const lgfx::touch_point_t *points, int count);
+    static void OnPanelTouch(const lgfx::touch_point_t *points, int count);
+    static void HandlePress(int touchX, int touchY);
+    static bool HitTest(int touchX, int touchY, int x, int y, int width, int height);
+
+    static string Basename(const string &path);
 
     /**
      * @brief Pointer to the global M5GFX display instance; assigned by Run().
@@ -95,12 +156,24 @@ private:
     /**
      * @brief SSEM store — 32 unsigned 32-bit words, all zero initially (JP 0).
      */
-    static uint32_t _store[32];
+    static uint32_t _store[Display::STORELINE_COUNT];
 
     /**
      * @brief Text label shown to the right of each storeline, initially "JP 0".
      */
-    static char _labels[32][32];
+    static char _labels[Display::STORELINE_COUNT][32];
+
+    // Control panel state
+    static bool _running;
+    static SpeedSetting _speedSetting;
+    static vector<string> _files;
+    static int _selectedFile;
+    static int _scrollOffset;
+    static bool _loadEnabled;
+    static bool _stopRunEnabled;
+    static bool _prevTouched;
+    static StopRunCallback _stopRunCallback;
+    static LoadCallback _loadCallback;
 
     /**
      * @brief Number of LEDs per storeline (one per bit).
@@ -200,6 +273,40 @@ private:
      *        that appears inside the text box, to the left of the mnemonic label.
      */
     static constexpr int HEX_COLUMN_WIDTH = 72;
+
+    // Control panel layout constants
+    static constexpr int PANEL_PADDING = 8;
+    static constexpr int PANEL_X = CONTROL_SECTION_X + PANEL_PADDING;
+    static constexpr int DISPLAY_WIDTH = 1280;
+    static constexpr int PANEL_WIDTH = DISPLAY_WIDTH - CONTROL_SECTION_X - (2 * PANEL_PADDING);
+    static constexpr int DISPLAY_HEIGHT = 720;
+    static constexpr int PANEL_Y = HEADER_HEIGHT + PANEL_PADDING;
+    static constexpr int PANEL_BOTTOM = DISPLAY_HEIGHT - FOOTER_HEIGHT - PANEL_PADDING;
+    static constexpr int INDICATOR_HEIGHT = 48;
+    static constexpr int SPEED_HEIGHT = 56;
+    static constexpr int FILES_LABEL_HEIGHT = 22;
+    static constexpr int FILES_LABEL_GAP = 4;
+    static constexpr int BUTTON_HEIGHT = 44;
+    static constexpr int BUTTON_GAP = 4;
+    static constexpr int SECTION_GAP = 8;
+    static constexpr int LIST_ITEM_HEIGHT = 26;
+    static constexpr int SCROLL_ARROW_HEIGHT = 26;
+    static constexpr int CORNER_RADIUS = 8;
+
+    static constexpr int INDICATOR_Y = PANEL_Y;
+    static constexpr int SPEED_Y = INDICATOR_Y + INDICATOR_HEIGHT + SECTION_GAP;
+    static constexpr int FILES_LABEL_Y = SPEED_Y + SPEED_HEIGHT + SECTION_GAP;
+    static constexpr int FILES_LIST_Y = FILES_LABEL_Y + FILES_LABEL_HEIGHT + FILES_LABEL_GAP;
+    static constexpr int STOPRUN_BUTTON_Y = PANEL_BOTTOM - BUTTON_HEIGHT;
+    static constexpr int LOAD_BUTTON_Y = STOPRUN_BUTTON_Y - BUTTON_GAP - BUTTON_HEIGHT;
+    static constexpr int FILES_LIST_BOTTOM = LOAD_BUTTON_Y - SECTION_GAP;
+    static constexpr int FILES_LIST_HEIGHT = FILES_LIST_BOTTOM - FILES_LIST_Y;
+    static constexpr int VISIBLE_ITEMS = (FILES_LIST_HEIGHT - (2 * SCROLL_ARROW_HEIGHT)) / LIST_ITEM_HEIGHT;
+
+    static constexpr int RADIO_OUTER_RADIUS = 8;
+    static constexpr int RADIO_INNER_RADIUS = 5;
+    static constexpr int RADIO_INDENT = 12;
+    static constexpr int RADIO_LABEL_OFFSET = 14;
 
     /**
      * @brief FreeRTOS queue handle for receiving DisplayMessage updates.
