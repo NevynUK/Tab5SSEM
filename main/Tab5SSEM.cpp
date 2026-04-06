@@ -40,6 +40,15 @@ using namespace std;
  * @brief Tagused for logging the main component.
  */
 const char *LOG_TAG = "Tab5SSEM";
+/**
+ * @brief Global store lines instance used by the SSEM emulator.
+ */
+StoreLines _storeLines;
+
+/**
+ * @brief Global CPU instance used by the SSEM emulator.
+ */
+Cpu *_cpu = nullptr;
 
 /**
  * @brief Global display instance used by M5GFX and the SSEM Display component.
@@ -207,41 +216,35 @@ vector<string> ReadSdCardFileContents(const string &filename)
     return (lines);
 }
 
-extern "C" void app_main(void)
+/**
+ * @brief Clear the global storelines and update the display to show the cleared state.
+ */
+void ClearStoreLinesAndUpdateDisplay()
 {
-    Setup();
-
-    SDCard *sdCard = SDCard::GetInstance();
-    if (sdCard != nullptr)
-    {
-        if (sdCard->IsMounted())
-        {
-            ESP_LOGI(LOG_TAG, "SD card is mounted.");
-            ReadSdCardFileNames();
-        }
-        else
-        {
-            ESP_LOGE(LOG_TAG, "SD card is NOT mounted.");
-        }
-    }
-    else
-    {
-        ESP_LOGE(LOG_TAG, "SDCard instance is null.");
-    }
-
     Display::DisplayMessage message = {};
 
     for (int i = 0; i < Display::STORELINE_COUNT; ++i)
     {
         message.storelineValues[i] = 0U;
-        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "JP 0");
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "JMP 0");
     }
 
     message.controlState = nullptr;
     Display::PostMessage(message);
+
+    _storeLines.Clear();
+}
+
+extern "C" void app_main(void)
+{
+    Setup();
+
+    ClearStoreLinesAndUpdateDisplay();
+
     StoreLines storeLines;
 
-    if (sdCard != nullptr && sdCard->IsMounted())
+    SDCard *sdCard = SDCard::GetInstance();
+    if ((sdCard != nullptr) && sdCard->IsMounted())
     {
         vector<string> filenames = ReadSdCardFileNames();
         Display::SetFiles(filenames);
@@ -271,6 +274,7 @@ extern "C" void app_main(void)
     clock_gettime(CLOCK_REALTIME, &start);
     while (!cpu->IsStopped())
     {
+        Display::DisplayMessage message = {};
         cpu->SingleStep();
         instructionCount++;
         for (int i = 0; i < Display::STORELINE_COUNT; ++i)

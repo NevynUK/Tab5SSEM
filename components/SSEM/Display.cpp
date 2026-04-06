@@ -38,12 +38,12 @@ volatile bool Display::_splashDismissed = false;
 bool Display::_changed[Display::STORELINE_COUNT] = {};
 
 /**
- * @brief SSEM store words; all initialised to zero (JP 0) in Run().
+ * @brief SSEM store words; all initialised to zero (JMP 0) in Run().
  */
 uint32_t Display::_store[Display::STORELINE_COUNT] = {};
 
 /**
- * @brief Storeline text labels; all initialised to "JP 0" in Run().
+ * @brief Storeline text labels; all initialised to "JMP 0" in Run().
  */
 char Display::_labels[Display::STORELINE_COUNT][32] = {};
 
@@ -111,7 +111,7 @@ QueueHandle_t Display::_queue = nullptr;
  *        interface, then starts the Display FreeRTOS task.
  *
  * Stores the display pointer, zeroes the SSEM store, sets all labels
- * to "JP 0", delegates to ShowSplash() then ShowMain(), creates the
+ * to "JMP 0", delegates to ShowSplash() then ShowMain(), creates the
  * message queue and launches the Display task.
  *
  * @param display  Reference to the global M5GFX instance (already
@@ -127,7 +127,7 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
     {
         _store[i] = 0U;
         _changed[i] = true;
-        snprintf(_labels[i], sizeof(_labels[i]), "JP 0");
+        snprintf(_labels[i], sizeof(_labels[i]), "JMP 0");
     }
 
     ShowSplash(sdCard);
