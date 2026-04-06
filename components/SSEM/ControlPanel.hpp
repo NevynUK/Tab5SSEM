@@ -161,7 +161,7 @@ private:
     /**
      * @brief X co-ordinate of the left edge of the control section.
      */
-    static constexpr int CONTROL_SECTION_X = 924;
+    static constexpr int CONTROL_SECTION_X = 928;
     /**
      * @brief Padding applied inside all four edges of the content area.
      */

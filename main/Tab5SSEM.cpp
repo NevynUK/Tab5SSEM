@@ -11,11 +11,14 @@
  *---------------------------------------------------------------------------*/
 
 #include <M5GFX.h>
-#include <cstdio>
-#include <ctime>
 #include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+
+#include <cstdio>
+#include <ctime>
+#include <string>
+#include <vector>
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -24,8 +27,7 @@
 #include "Rtc.hpp"
 #include "SDCard.hpp"
 #include "Touch.hpp"
-#include <string>
-#include <vector>
+#include "ControlPanel.hpp"
 
 #include "CPU.hpp"
 #include "StoreLines.hpp"
@@ -241,6 +243,8 @@ extern "C" void app_main(void)
 
     if (sdCard != nullptr && sdCard->IsMounted())
     {
+        vector<string> filenames = ReadSdCardFileNames();
+        ControlPanel::SetFiles(filenames);
         string targetFile = "hfr989.ssem";
 
         ESP_LOGI(LOG_TAG, "Attempting to read file: %s", targetFile.c_str());
