@@ -172,7 +172,7 @@ string Register::Disassemble() const
     }
     else
     {
-        snprintf(buffer, sizeof(buffer), "%s %" PRIu32, Instructions::Mnemonic(opcode), (uint32_t)lineNumber);
+        snprintf(buffer, sizeof(buffer), "%s %" PRIu32, Instructions::Mnemonic(opcode), (uint32_t) lineNumber);
     }
 
     return (string(buffer));

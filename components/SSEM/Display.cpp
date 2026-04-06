@@ -263,7 +263,7 @@ void Display::DrawStoreline(int lineIndex)
 
     // Draw the storeline index number to the left of the LED box (outside it)
     char lineNumber[4];
-    snprintf(lineNumber, sizeof(lineNumber), "%" PRId32, (int32_t)lineIndex);
+    snprintf(lineNumber, sizeof(lineNumber), "%" PRId32, (int32_t) lineIndex);
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_right);

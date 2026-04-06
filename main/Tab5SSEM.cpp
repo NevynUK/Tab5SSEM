@@ -101,7 +101,7 @@ void UpdateDisplayTube(StoreLines &storeLines)
     {
         const string binary = storeLines[lineNumber].Binary();
         const string disassembled = storeLines[lineNumber].Disassemble();
-        ESP_LOGI(LOG_TAG, "%4" PRIu32 ": 0x%08" PRIx32 " - %32s %-16s ; %" PRId32, (uint32_t)lineNumber, (uint32_t)storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int32_t)storeLines[lineNumber].GetValue());
+        ESP_LOGI(LOG_TAG, "%4" PRIu32 ": 0x%08" PRIx32 " - %32s %-16s ; %" PRId32, (uint32_t) lineNumber, (uint32_t) storeLines[lineNumber].ReverseBits(), binary.c_str(), disassembled.c_str(), (int32_t) storeLines[lineNumber].GetValue());
     }
 }
 
