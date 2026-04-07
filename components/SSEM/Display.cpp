@@ -887,7 +887,9 @@ bool Display::PostMessage(const DisplayMessage &message)
  *
  * Blocks indefinitely on _queue.  On each message received, copies the
  * storeline values and text labels into the static members then redraws
- * all storeline rows and flushes the framebuffer.
+ * all storeline rows and flushes the framebuffer.  If the message carries
+ * a non-null controlState, the Stop/Run button is also enabled and redrawn
+ * in the same pass, avoiding concurrent drawing from other tasks.
  *
  * @param parameter  Unused; required by the FreeRTOS task signature.
  */
@@ -916,6 +918,13 @@ void Display::DisplayTask(void *parameter)
             }
 
             DrawAllStorelines();
+
+            if (message.controlState != nullptr)
+            {
+                _stopRunEnabled = true;
+                DrawActionButtons();
+            }
+
             _display->display();
         }
     }

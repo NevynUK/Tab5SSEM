@@ -275,7 +275,7 @@ void LoadFile(const string &fullPath)
                  _storeLines[i].Disassemble().c_str());
     }
 
-    message.controlState = nullptr;
+    message.controlState = reinterpret_cast<void *>(1);
     Display::PostMessage(message);
 
     ESP_LOGI(LOG_TAG, "File loaded: %s", fullPath.c_str());
