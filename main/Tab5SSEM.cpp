@@ -16,7 +16,6 @@
 #include <freertos/task.h>
 
 #include <cstdio>
-#include <ctime>
 #include <string>
 #include <vector>
 
@@ -175,20 +174,19 @@ vector<string> ReadSdCardFileNames()
 /**
  * @brief Read the contents of the specified file, one line per entry.
  *
- * Opens the file at the given path for reading.  Each line is stripped of
+ * Opens the file at the given full path for reading.  Each line is stripped of
  * its trailing newline and carriage-return characters before being appended
  * to the result vector.  Blank lines and lines that could not be read are
  * skipped.
  *
- * @param filename  Full path to the file to read (e.g. "/sdcard/Add.ssem").
+ * @param fullPath  Full file system path to the file (e.g. "/sdcard/Add.ssem").
  * @return vector<string>  File contents with one entry per line.
  *         The vector is empty if the file could not be opened.
  */
-vector<string> ReadSdCardFileContents(const string &filename)
+vector<string> ReadSdCardFileContents(const string &fullPath)
 {
     vector<string> lines;
 
-    string fullPath = string(SDCard::MOUNT_POINT) + "/" + filename;
     FILE *file = fopen(fullPath.c_str(), "r");
     if (file == nullptr)
     {
@@ -235,60 +233,68 @@ void ClearStoreLinesAndUpdateDisplay()
     _storeLines.Clear();
 }
 
+/**
+ * @brief Load, compile and display an SSEM program file.
+ *
+ * Reads the file at the given full path, compiles it into store lines,
+ * replaces the global CPU instance, then posts the initial storeline
+ * state to the Display task.
+ *
+ * Called from the Display touch handler when the Load button is pressed.
+ *
+ * @param fullPath  Full file system path to the .ssem file (e.g. "/sdcard/Add.ssem").
+ */
+void LoadFile(const string &fullPath)
+{
+    ESP_LOGI(LOG_TAG, "Loading file: %s", fullPath.c_str());
+
+    const vector<string> fileContents = ReadSdCardFileContents(fullPath);
+    if (fileContents.empty())
+    {
+        ESP_LOGE(LOG_TAG, "File is empty or could not be read: %s", fullPath.c_str());
+        return;
+    }
+
+    _storeLines = Compiler::Compile(fileContents);
+
+    if (_cpu != nullptr)
+    {
+        delete _cpu;
+        _cpu = nullptr;
+    }
+
+    _cpu = new Cpu(_storeLines);
+    _cpu->Reset();
+
+    Display::DisplayMessage message = {};
+
+    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+    {
+        message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s",
+                 _storeLines[i].Disassemble().c_str());
+    }
+
+    message.controlState = nullptr;
+    Display::PostMessage(message);
+
+    ESP_LOGI(LOG_TAG, "File loaded: %s", fullPath.c_str());
+}
+
 extern "C" void app_main(void)
 {
     Setup();
 
     ClearStoreLinesAndUpdateDisplay();
 
-    StoreLines storeLines;
+    Display::SetLoadCallback(LoadFile);
 
     SDCard *sdCard = SDCard::GetInstance();
     if ((sdCard != nullptr) && sdCard->IsMounted())
     {
         vector<string> filenames = ReadSdCardFileNames();
         Display::SetFiles(filenames);
-        string targetFile = "hfr989.ssem";
-
-        ESP_LOGI(LOG_TAG, "Attempting to read file: %s", targetFile.c_str());
-        vector<string> fileContents = ReadSdCardFileContents(targetFile);
-        for (const auto &line: fileContents)
-        {
-            ESP_LOGI(LOG_TAG, "    %s", line.c_str());
-        }
-        if (!fileContents.empty())
-        {
-            storeLines = Compiler::Compile(fileContents);
-            UpdateDisplayTube(storeLines);
-        }
-        else
-        {
-            ESP_LOGE(LOG_TAG, "File contents are empty or file could not be read: %s", targetFile.c_str());
-        }
     }
 
-    Cpu *cpu = new Cpu(storeLines);
-    cpu->Reset();
-    uint32_t instructionCount = 0;
-    struct timespec start;
-    clock_gettime(CLOCK_REALTIME, &start);
-    while (!cpu->IsStopped())
-    {
-        Display::DisplayMessage message = {};
-        cpu->SingleStep();
-        instructionCount++;
-        for (int i = 0; i < Display::STORELINE_COUNT; ++i)
-        {
-            message.storelineValues[i] = storeLines[i].GetValue();
-            snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", storeLines[i].Disassemble().c_str());
-        }
-
-        Display::PostMessage(message);
-    }
-    ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
-    UpdateDisplayTube(storeLines);
-    struct timespec end;
-    clock_gettime(CLOCK_REALTIME, &end);
-    double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
-    ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.6f seconds", elapsedTime);
+    vTaskDelete(nullptr);
 }

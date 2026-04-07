@@ -818,6 +818,7 @@ void Display::HandlePress(int touchX, int touchY)
             if (fileIndex >= 0 && fileIndex < totalFiles)
             {
                 _selectedFile = fileIndex;
+                _loadEnabled = true;
                 DrawFileList();
                 DrawActionButtons();
                 _display->display();
