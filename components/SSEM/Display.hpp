@@ -171,6 +171,14 @@ private:
     static int _scrollOffset;
     static bool _loadEnabled;
     static bool _stopRunEnabled;
+
+    /**
+     * @brief true when the speed radio buttons are enabled.
+     *
+     * Set to false while the SSEM CPU is executing so the speed cannot
+     * be changed mid-run; restored to true when execution stops.
+     */
+    static bool _speedEnabled;
     static bool _prevTouched;
     static StopRunCallback _stopRunCallback;
     static LoadCallback _loadCallback;

@@ -83,6 +83,11 @@ bool Display::_loadEnabled = false;
 bool Display::_stopRunEnabled = false;
 
 /**
+ * @brief true when the speed radio buttons are enabled.
+ */
+bool Display::_speedEnabled = true;
+
+/**
  * @brief Previous touch active state used to detect press edges.
  */
 bool Display::_prevTouched = false;
@@ -524,9 +529,12 @@ void Display::DrawSpeedSection()
     // Clear section background
     _display->fillRect(PANEL_X, SPEED_Y, PANEL_WIDTH, SPEED_HEIGHT, TFT_BLACK);
 
+    // Use grey for all elements when the speed section is disabled
+    const uint16_t sectionColour = _speedEnabled ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_DARKGREY);
+
     // Section label
     _display->setFont(&fonts::Font4);
-    _display->setTextColor(TFT_WHITE, TFT_BLACK);
+    _display->setTextColor(sectionColour, TFT_BLACK);
     _display->setTextDatum(textdatum_t::top_left);
     _display->drawString("Speed:", PANEL_X, SPEED_Y + 2);
 
@@ -537,8 +545,8 @@ void Display::DrawSpeedSection()
     const int maxCircleX = PANEL_X + RADIO_INDENT + RADIO_OUTER_RADIUS;
     const int maxLabelX = maxCircleX + RADIO_OUTER_RADIUS + RADIO_LABEL_OFFSET;
     const bool maxSelected = (_speedSetting == SpeedSetting::Maximum);
-    _display->drawCircle(maxCircleX, rowCentreY, RADIO_OUTER_RADIUS, TFT_WHITE);
-    _display->fillCircle(maxCircleX, rowCentreY, RADIO_INNER_RADIUS, maxSelected ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_BLACK));
+    _display->drawCircle(maxCircleX, rowCentreY, RADIO_OUTER_RADIUS, sectionColour);
+    _display->fillCircle(maxCircleX, rowCentreY, RADIO_INNER_RADIUS, maxSelected ? sectionColour : static_cast<uint16_t>(TFT_BLACK));
     _display->setFont(&fonts::Font4);
     _display->setTextDatum(textdatum_t::middle_left);
     _display->drawString("Maximum", maxLabelX, rowCentreY);
@@ -547,8 +555,8 @@ void Display::DrawSpeedSection()
     const int origCircleX = PANEL_X + halfWidth + RADIO_INDENT + RADIO_OUTER_RADIUS;
     const int origLabelX = origCircleX + RADIO_OUTER_RADIUS + RADIO_LABEL_OFFSET;
     const bool origSelected = (_speedSetting == SpeedSetting::Original);
-    _display->drawCircle(origCircleX, rowCentreY, RADIO_OUTER_RADIUS, TFT_WHITE);
-    _display->fillCircle(origCircleX, rowCentreY, RADIO_INNER_RADIUS, origSelected ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_BLACK));
+    _display->drawCircle(origCircleX, rowCentreY, RADIO_OUTER_RADIUS, sectionColour);
+    _display->fillCircle(origCircleX, rowCentreY, RADIO_INNER_RADIUS, origSelected ? sectionColour : static_cast<uint16_t>(TFT_BLACK));
     _display->drawString("Original", origLabelX, rowCentreY);
 
     _display->endWrite();
@@ -580,17 +588,17 @@ void Display::DrawFileList()
     // Clear list interior
     _display->fillRect(PANEL_X + 1, FILES_LIST_Y + 1, PANEL_WIDTH - 2, FILES_LIST_HEIGHT - 2, TFT_BLACK);
 
-    // Scroll-up arrow (grey when already at the top)
+    // Scroll-up arrow (grey when disabled or already at the top)
     const bool canScrollUp = (_scrollOffset > 0);
-    const uint16_t upColour = canScrollUp ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_DARKGREY);
+    const uint16_t upColour = (!_running && canScrollUp) ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_DARKGREY);
     const int upArrowCentreX = PANEL_X + PANEL_WIDTH / 2;
     const int upArrowCentreY = FILES_LIST_Y + SCROLL_ARROW_HEIGHT / 2;
     _display->fillTriangle(upArrowCentreX, upArrowCentreY - 6, upArrowCentreX - 8, upArrowCentreY + 5, upArrowCentreX + 8, upArrowCentreY + 5, upColour);
 
-    // Scroll-down arrow (grey when already at the bottom)
+    // Scroll-down arrow (grey when disabled or already at the bottom)
     const int totalFiles = static_cast<int>(_files.size());
     const bool canScrollDown = (totalFiles > 0) && ((_scrollOffset + VISIBLE_ITEMS) < totalFiles);
-    const uint16_t downColour = canScrollDown ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_DARKGREY);
+    const uint16_t downColour = (!_running && canScrollDown) ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_DARKGREY);
     const int downArrowCentreX = PANEL_X + PANEL_WIDTH / 2;
     const int downArrowCentreY = FILES_LIST_BOTTOM - SCROLL_ARROW_HEIGHT / 2;
     _display->fillTriangle(downArrowCentreX, downArrowCentreY + 6, downArrowCentreX - 8, downArrowCentreY - 5, downArrowCentreX + 8, downArrowCentreY - 5, downColour);
@@ -611,8 +619,21 @@ void Display::DrawFileList()
         if (fileIndex < totalFiles)
         {
             const bool selected = (fileIndex == _selectedFile);
-            const uint16_t bgColour = selected ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_BLACK);
-            const uint16_t textColour = selected ? static_cast<uint16_t>(TFT_BLACK) : static_cast<uint16_t>(TFT_WHITE);
+
+            // When running, render all items in grey to signal the list is disabled
+            uint16_t bgColour;
+            uint16_t textColour;
+
+            if (_running)
+            {
+                bgColour = TFT_BLACK;
+                textColour = TFT_DARKGREY;
+            }
+            else
+            {
+                bgColour = selected ? static_cast<uint16_t>(TFT_WHITE) : static_cast<uint16_t>(TFT_BLACK);
+                textColour = selected ? static_cast<uint16_t>(TFT_BLACK) : static_cast<uint16_t>(TFT_WHITE);
+            }
 
             _display->fillRect(PANEL_X + 1, itemY, PANEL_WIDTH - 2, LIST_ITEM_HEIGHT, bgColour);
 
@@ -747,8 +768,9 @@ void Display::HandlePress(int touchX, int touchY)
     }
 
     // -------------------------------------------------------------------
-    // Speed radio buttons (side by side on one row)
+    // Speed radio buttons (side by side on one row) — disabled while running
     // -------------------------------------------------------------------
+    if (_speedEnabled)
     {
         const int halfWidth = PANEL_WIDTH / 2;
         const int rowCentreY = SPEED_Y + 38;
@@ -776,7 +798,7 @@ void Display::HandlePress(int touchX, int touchY)
     // -------------------------------------------------------------------
     if (HitTest(touchX, touchY, PANEL_X, FILES_LIST_Y, PANEL_WIDTH, SCROLL_ARROW_HEIGHT))
     {
-        if (_scrollOffset > 0)
+        if (!_running && _scrollOffset > 0)
         {
             _scrollOffset--;
             DrawFileList();
@@ -791,7 +813,7 @@ void Display::HandlePress(int touchX, int touchY)
     if (HitTest(touchX, touchY, PANEL_X, FILES_LIST_BOTTOM - SCROLL_ARROW_HEIGHT, PANEL_WIDTH, SCROLL_ARROW_HEIGHT))
     {
         const int totalFiles = static_cast<int>(_files.size());
-        if ((_scrollOffset + VISIBLE_ITEMS) < totalFiles)
+        if (!_running && (_scrollOffset + VISIBLE_ITEMS) < totalFiles)
         {
             _scrollOffset++;
             DrawFileList();
@@ -810,18 +832,21 @@ void Display::HandlePress(int touchX, int touchY)
 
         if (HitTest(touchX, touchY, PANEL_X, itemsAreaY, PANEL_WIDTH, itemsAreaHeight))
         {
-            const int relativeY = touchY - itemsAreaY;
-            const int itemIndex = relativeY / LIST_ITEM_HEIGHT;
-            const int fileIndex = _scrollOffset + itemIndex;
-            const int totalFiles = static_cast<int>(_files.size());
-
-            if (fileIndex >= 0 && fileIndex < totalFiles)
+            if (!_running)
             {
-                _selectedFile = fileIndex;
-                _loadEnabled = true;
-                DrawFileList();
-                DrawActionButtons();
-                _display->display();
+                const int relativeY = touchY - itemsAreaY;
+                const int itemIndex = relativeY / LIST_ITEM_HEIGHT;
+                const int fileIndex = _scrollOffset + itemIndex;
+                const int totalFiles = static_cast<int>(_files.size());
+
+                if (fileIndex >= 0 && fileIndex < totalFiles)
+                {
+                    _selectedFile = fileIndex;
+                    _loadEnabled = true;
+                    DrawFileList();
+                    DrawActionButtons();
+                    _display->display();
+                }
             }
             return;
         }
@@ -844,9 +869,30 @@ void Display::HandlePress(int touchX, int touchY)
     // -------------------------------------------------------------------
     if (_stopRunEnabled && HitTest(touchX, touchY, PANEL_X, STOPRUN_BUTTON_Y, PANEL_WIDTH, BUTTON_HEIGHT))
     {
+        _running = !_running;
+
+        if (_running)
+        {
+            // Transitioning to running: disable speed, load, and list interaction
+            _speedEnabled = false;
+            _loadEnabled = false;
+        }
+        else
+        {
+            // Transitioning to stopped: re-enable speed and restore load state
+            _speedEnabled = true;
+            _loadEnabled = (_selectedFile >= 0);
+        }
+
+        DrawRunningIndicator();
+        DrawSpeedSection();
+        DrawFileList();
+        DrawActionButtons();
+        _display->display();
+
         if (_stopRunCallback)
         {
-            _stopRunCallback(!_running);
+            _stopRunCallback(_running);
         }
         return;
     }

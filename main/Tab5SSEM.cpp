@@ -271,14 +271,34 @@ void LoadFile(const string &fullPath)
     for (int i = 0; i < Display::STORELINE_COUNT; ++i)
     {
         message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
-        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s",
-                 _storeLines[i].Disassemble().c_str());
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
     }
 
     message.controlState = reinterpret_cast<void *>(1);
     Display::PostMessage(message);
 
     ESP_LOGI(LOG_TAG, "File loaded: %s", fullPath.c_str());
+}
+
+/**
+ * @brief Invoked by the Display layer when the Stop/Run button is pressed.
+ *
+ * Receives the new intended running state and is responsible for starting
+ * or stopping SSEM CPU execution accordingly.
+ *
+ * @param running  true if the user has requested execution to start;
+ *                 false if the user has requested execution to stop.
+ */
+void OnStopRunPressed(bool running)
+{
+    if (running)
+    {
+        ESP_LOGI(LOG_TAG, "Run requested");
+    }
+    else
+    {
+        ESP_LOGI(LOG_TAG, "Stop requested");
+    }
 }
 
 extern "C" void app_main(void)
@@ -288,6 +308,7 @@ extern "C" void app_main(void)
     ClearStoreLinesAndUpdateDisplay();
 
     Display::SetLoadCallback(LoadFile);
+    Display::SetStopRunCallback(OnStopRunPressed);
 
     SDCard *sdCard = SDCard::GetInstance();
     if ((sdCard != nullptr) && sdCard->IsMounted())
