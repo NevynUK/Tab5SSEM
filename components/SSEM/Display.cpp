@@ -171,7 +171,9 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
     TouchInput::GetInstance()->AddCallback(OnPanelTouch);
 
     _queue = xQueueCreate(4, sizeof(DisplayMessage));
+    configASSERT(_queue != nullptr);
     _displayMutex = xSemaphoreCreateMutex();
+    configASSERT(_displayMutex != nullptr);
     xTaskCreate(DisplayTask, "DisplayTask", 8192, nullptr, 5, nullptr);
 }
 
@@ -184,13 +186,12 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
  */
 void Display::SetRunning(bool running)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _running = running;
     DrawRunningIndicator();
     DrawFileList();
     DrawActionButtons();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -203,14 +204,13 @@ void Display::SetRunning(bool running)
  */
 void Display::SetFiles(const vector<string> &files)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _files = files;
     _selectedFile = -1;
     _scrollOffset = 0;
     DrawFileList();
     DrawActionButtons();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -222,11 +222,10 @@ void Display::SetFiles(const vector<string> &files)
  */
 void Display::SetLoadEnabled(bool enabled)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _loadEnabled = enabled;
     DrawActionButtons();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -238,11 +237,10 @@ void Display::SetLoadEnabled(bool enabled)
  */
 void Display::SetStopRunEnabled(bool enabled)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _stopRunEnabled = enabled;
     DrawActionButtons();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -254,11 +252,10 @@ void Display::SetStopRunEnabled(bool enabled)
  */
 void Display::SetSpeedEnabled(bool enabled)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _speedEnabled = enabled;
     DrawSpeedSection();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -272,14 +269,13 @@ void Display::SetSpeedEnabled(bool enabled)
  */
 void Display::SetProgramName(const string &name)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _loadedProgram = name;
     _instructionCount = 0;
     _elapsedSeconds = 0.0;
     DrawHeader();
     DrawFooter();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -293,12 +289,11 @@ void Display::SetProgramName(const string &name)
  */
 void Display::UpdateFooter(uint32_t instructionCount, double elapsedSeconds)
 {
-    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    const MutexGuard guard(_displayMutex);
     _instructionCount = instructionCount;
     _elapsedSeconds = elapsedSeconds;
     DrawFooter();
     _display->display();
-    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -1059,7 +1054,7 @@ void Display::DisplayTask(void *parameter)
     {
         if (xQueueReceive(_queue, &message, portMAX_DELAY) == pdTRUE)
         {
-            xSemaphoreTake(_displayMutex, portMAX_DELAY);
+            const MutexGuard guard(_displayMutex);
 
             for (int i = 0; i < STORELINE_COUNT; ++i)
             {
@@ -1095,7 +1090,6 @@ void Display::DisplayTask(void *parameter)
             }
 
             _display->display();
-            xSemaphoreGive(_displayMutex);
         }
     }
 }

@@ -121,6 +121,45 @@ public:
 
 private:
     Display() = delete;
+
+    /**
+     * @brief RAII scope guard that acquires _displayMutex on construction and
+     *        releases it on destruction.
+     *
+     * Ensures the mutex is always released even if an early return is added to
+     * a guarded method in the future.
+     */
+    class MutexGuard
+    {
+    public:
+        /**
+         * @brief Acquires the mutex; blocks until it is available.
+         *
+         * @param mutex  FreeRTOS semaphore handle to acquire.
+         */
+        explicit MutexGuard(SemaphoreHandle_t mutex) : _mutex(mutex)
+        {
+            xSemaphoreTake(_mutex, portMAX_DELAY);
+        }
+
+        /**
+         * @brief Releases the mutex.
+         */
+        ~MutexGuard()
+        {
+            xSemaphoreGive(_mutex);
+        }
+
+        MutexGuard(const MutexGuard &) = delete;
+        MutexGuard &operator=(const MutexGuard &) = delete;
+
+    private:
+        /**
+         * @brief The FreeRTOS semaphore handle being guarded.
+         */
+        SemaphoreHandle_t _mutex;
+    };
+
     static void ShowSplash(SDCard *sdCard);
     static void ShowMain();
     static void DrawHeader();
