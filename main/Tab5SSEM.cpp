@@ -41,6 +41,7 @@ using namespace std;
  * @brief Tagused for logging the main component.
  */
 const char *LOG_TAG = "Tab5SSEM";
+
 /**
  * @brief Global store lines instance used by the SSEM emulator.
  */
