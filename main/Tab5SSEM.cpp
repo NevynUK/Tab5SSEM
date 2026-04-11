@@ -51,7 +51,7 @@ StoreLines _storeLines;
 /**
  * @brief Global CPU instance used by the SSEM emulator.
  */
-static std::unique_ptr<Cpu> _cpu = nullptr;
+static unique_ptr<Cpu> _cpu = nullptr;
 
 /**
  * @brief Handle of the app_main task; used by OnStopRunPressed to send a run
@@ -343,7 +343,7 @@ void LoadFile(const string &fullPath)
 
     _storeLines = Compiler::Compile(fileContents);
 
-    _cpu = std::make_unique<Cpu>(_storeLines);
+    _cpu = make_unique<Cpu>(_storeLines);
     _cpu->Reset();
 
     Display::DisplayMessage message = {};
