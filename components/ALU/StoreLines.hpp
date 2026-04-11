@@ -19,6 +19,11 @@ private:
      */
     vector<Register> _lines;
 
+    /**
+     * @brief Dirty flag to track if any store lines have changed.
+     */
+    bool _dirty = true;
+
 public:
     explicit StoreLines(uint size = 32);
     ~StoreLines();
@@ -32,6 +37,26 @@ public:
     uint Size() const
     {
         return (_lines.size());
+    }
+
+    /**
+     * @brief Check if any of the store lines are dirty.
+     *
+     * @return true if any store lines are dirty.
+     */
+    bool IsDirty() const noexcept
+    {
+        return (_dirty);
+    }
+
+    /**
+     * @brief Set the dirty flag for the store lines.
+     *
+     * @param dirty New value for the dirty flag.
+     */
+    void SetDirty(bool dirty) noexcept
+    {
+        _dirty = dirty;
     }
 
     void Clear();

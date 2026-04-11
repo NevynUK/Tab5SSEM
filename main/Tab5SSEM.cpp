@@ -439,6 +439,9 @@ extern "C" void app_main(void)
         ESP_LOGI(LOG_TAG, "Program loaded, starting execution");
         UpdateDisplayTube(_storeLines);
 
+        // Force an initial update to the display.
+        _storeLines.SetDirty(true);
+
         while ((_stopRequested == false) && !_cpu->IsStopped())
         {
             //
@@ -451,9 +454,14 @@ extern "C" void app_main(void)
             }
             instructionCount++;
             _cpu->SingleStep();
-            Display::DisplayMessage message = {};
-            PopulateDisplayMessage(message, false);
-            Display::PostMessage(message);
+
+            if (_storeLines.IsDirty())
+            {
+                Display::DisplayMessage message = {};
+                PopulateDisplayMessage(message, false);
+                Display::PostMessage(message);
+                _storeLines.SetDirty(false);
+            }
 
             const int64_t nowUs = esp_timer_get_time();
             const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1'000U) || ((nowUs - lastFooterUpdateUs) >= 1'000'000LL);
