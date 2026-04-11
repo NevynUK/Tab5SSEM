@@ -64,9 +64,10 @@ fi
 SOURCE_DIR=$scriptdir
 COMPONENTS_DIR=$SOURCE_DIR/components
 
-echo "Running cppcheck"
-
-cppcheck --error-exitcode=1 --quiet --check-level=exhaustive --force --inline-suppr -iCMakeLists.txt -imanaged_components -ibuild .
+if ! $REFORMAT; then
+    echo "Running cppcheck"
+    cppcheck --error-exitcode=1 --quiet --check-level=exhaustive --force --inline-suppr -iCMakeLists.txt -imanaged_components -ibuild .
+fi
 
 if $REFORMAT; then
     CLANG_FORMAT_OPTS="-i"
