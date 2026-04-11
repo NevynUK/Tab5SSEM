@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -50,7 +51,7 @@ StoreLines _storeLines;
 /**
  * @brief Global CPU instance used by the SSEM emulator.
  */
-Cpu *_cpu = nullptr;
+static std::unique_ptr<Cpu> _cpu = nullptr;
 
 /**
  * @brief Handle of the app_main task; used by OnStopRunPressed to send a run
@@ -342,13 +343,7 @@ void LoadFile(const string &fullPath)
 
     _storeLines = Compiler::Compile(fileContents);
 
-    if (_cpu != nullptr)
-    {
-        delete _cpu;
-        _cpu = nullptr;
-    }
-
-    _cpu = new Cpu(_storeLines);
+    _cpu = std::make_unique<Cpu>(_storeLines);
     _cpu->Reset();
 
     Display::DisplayMessage message = {};
@@ -444,6 +439,9 @@ extern "C" void app_main(void)
         ESP_LOGI(LOG_TAG, "Program loaded, starting execution");
         UpdateDisplayTube(_storeLines);
 
+        // Force an initial update to the display.
+        _storeLines.SetDirty(true);
+
         while ((_stopRequested == false) && !_cpu->IsStopped())
         {
             //
@@ -456,9 +454,14 @@ extern "C" void app_main(void)
             }
             instructionCount++;
             _cpu->SingleStep();
-            Display::DisplayMessage message = {};
-            PopulateDisplayMessage(message, false);
-            Display::PostMessage(message);
+
+            if (_storeLines.IsDirty())
+            {
+                Display::DisplayMessage message = {};
+                PopulateDisplayMessage(message, false);
+                Display::PostMessage(message);
+                _storeLines.SetDirty(false);
+            }
 
             const int64_t nowUs = esp_timer_get_time();
             const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1'000U) || ((nowUs - lastFooterUpdateUs) >= 1'000'000LL);

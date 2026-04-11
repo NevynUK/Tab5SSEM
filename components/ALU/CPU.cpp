@@ -124,6 +124,7 @@ bool Cpu::SingleStep()
             break;
         case Instruction::STO:
             _storeLines[lineNumber].SetValue(_accumulator.GetValue());
+            _storeLines.SetDirty(true);
             break;
         case Instruction::SUB:
             _accumulator.Subtract(_storeLines[lineNumber]);

@@ -42,4 +42,5 @@ void StoreLines::Clear()
     {
         line.SetValue(0);
     }
+    _dirty = true;
 }
