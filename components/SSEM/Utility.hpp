@@ -24,7 +24,6 @@ using namespace std;
 class Utility
 {
 public:
-
     /**
      * @brief Formats an unsigned 32-bit integer as a decimal string with
      *        comma thousands separators (e.g. 1234567 becomes "1,234,567").

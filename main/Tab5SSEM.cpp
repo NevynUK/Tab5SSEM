@@ -68,7 +68,7 @@ static volatile bool _stopRequested = false;
 
 /**
  * @brief Store the speed setting for this run.
- * 
+ *
  * @note This global does not need protecting from access as it can only be changed when a program
  *       is not running as the controls are disabled when the Run button is pressed.
  */
@@ -117,12 +117,11 @@ void Setup(void)
 {
     // Create the 1 ms system timer in the stopped state.  Start it with
     // esp_timer_start_periodic(_systemTimerHandle, 1000) when required.
-    const esp_timer_create_args_t timerArgs =
-    {
-        .callback        = SystemTimerCallback,
-        .arg             = nullptr,
+    const esp_timer_create_args_t timerArgs = {
+        .callback = SystemTimerCallback,
+        .arg = nullptr,
         .dispatch_method = ESP_TIMER_TASK,
-        .name            = "system_timer",
+        .name = "system_timer",
         .skip_unhandled_events = false,
     };
     ESP_ERROR_CHECK(esp_timer_create(&timerArgs, &_systemTimerHandle));
@@ -418,7 +417,7 @@ extern "C" void app_main(void)
     // Save this task handle so OnStopRunPressed can send a run and single step notification.
     _appMainTaskHandle = xTaskGetCurrentTaskHandle();
 
-    // 
+    //
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -470,7 +469,7 @@ extern "C" void app_main(void)
             }
         }
 
-        esp_timer_stop(_systemTimerHandle);         // Stop the timer if it is running, we don't worry if it isn't and we discard the result.
+        esp_timer_stop(_systemTimerHandle); // Stop the timer if it is running, we don't worry if it isn't and we discard the result.
         struct timespec end;
         clock_gettime(CLOCK_REALTIME, &end);
         double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;

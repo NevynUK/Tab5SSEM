@@ -296,6 +296,7 @@ void Display::UpdateFooter(uint32_t instructionCount, double elapsedSeconds)
     _display->display();
     xSemaphoreGive(_displayMutex);
 }
+
 /**
  * @brief Retrieves the current speed setting.
  *
