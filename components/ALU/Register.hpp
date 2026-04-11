@@ -64,6 +64,15 @@ public:
     string Disassemble() const;
 
     /**
+     * @brief Disassemble the register contents directly into a character buffer,
+     *        avoiding a heap allocation.
+     *
+     * @param buffer  Destination buffer.
+     * @param size    Size of the destination buffer in bytes.
+     */
+    void Disassemble(char *buffer, size_t size) const;
+
+    /**
      * @brief Add 1 to the register value.
      */
     void Increment() noexcept;

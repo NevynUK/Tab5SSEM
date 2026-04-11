@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 /**
  * @brief SSEM emulator display controller.
  *
@@ -66,14 +64,14 @@ public:
      * The bool argument is the new intended running state:
      * true = the user wants to start execution, false = stop.
      */
-    using StopRunCallback = function<void(bool running)>;
+    using StopRunCallback = std::function<void(bool running)>;
 
     /**
      * @brief Callback type invoked when the Load button is pressed.
      *
      * The string argument is the full path of the currently selected file.
      */
-    using LoadCallback = function<void(const string &filename)>;
+    using LoadCallback = std::function<void(const std::string &filename)>;
 
     /**
      * @brief Message sent to the Display task via the message queue.
@@ -109,11 +107,11 @@ public:
     static bool PostMessage(const DisplayMessage &message);
 
     static void SetRunning(bool running);
-    static void SetFiles(const vector<string> &files);
+    static void SetFiles(const std::vector<std::string> &files);
     static void SetLoadEnabled(bool enabled);
     static void SetStopRunEnabled(bool enabled);
     static void SetSpeedEnabled(bool enabled);
-    static void SetProgramName(const string &name);
+    static void SetProgramName(const std::string &name);
     static void UpdateFooter(uint32_t instructionCount, double elapsedSeconds);
 
     static SpeedSetting GetSpeed();
@@ -122,6 +120,7 @@ public:
     static void SetLoadCallback(LoadCallback callback);
 
 private:
+    Display() = delete;
     static void ShowSplash(SDCard *sdCard);
     static void ShowMain();
     static void DrawHeader();
@@ -146,7 +145,7 @@ private:
     static void HandlePress(int touchX, int touchY);
     static bool HitTest(int touchX, int touchY, int x, int y, int width, int height);
 
-    static string Basename(const string &path);
+    static std::string Basename(const std::string &path);
 
     /**
      * @brief Pointer to the global M5GFX display instance; assigned by Run().
@@ -176,7 +175,7 @@ private:
     // Control panel state
     static bool _running;
     static SpeedSetting _speedSetting;
-    static vector<string> _files;
+    static std::vector<std::string> _files;
     static int _selectedFile;
     static int _scrollOffset;
     static bool _loadEnabled;
@@ -198,7 +197,7 @@ private:
      *
      * Displayed in the header enclosed in brackets when non-empty.
      */
-    static string _loadedProgram;
+    static std::string _loadedProgram;
 
     /**
      * @brief Instruction count shown in the footer during and after execution.

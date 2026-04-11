@@ -156,6 +156,28 @@ uint Register::Opcode() const noexcept
 }
 
 /**
+ * @brief Disassemble the register contents directly into a character buffer,
+ *        avoiding a heap allocation.
+ *
+ * @param buffer  Destination buffer.
+ * @param size    Size of the destination buffer in bytes.
+ */
+void Register::Disassemble(char *buffer, size_t size) const
+{
+    const uint lineNumber = LineNumber();
+    const Instruction::opcodes_e opcode = static_cast<Instruction::opcodes_e>(Opcode());
+
+    if ((opcode == Instruction::CMP) || (opcode == Instruction::HALT))
+    {
+        snprintf(buffer, size, "%s", Instructions::Mnemonic(opcode));
+    }
+    else
+    {
+        snprintf(buffer, size, "%s %" PRIu32, Instructions::Mnemonic(opcode), (uint32_t) lineNumber);
+    }
+}
+
+/**
  * @brief Disassemble the register contents into a SSEM assembler instruction.
  *
  * @return string Disassembled SSEM assembler instruction.
@@ -163,17 +185,6 @@ uint Register::Opcode() const noexcept
 string Register::Disassemble() const
 {
     char buffer[Constants::LINE_LENGTH];
-    uint lineNumber = LineNumber();
-    Instruction::opcodes_e opcode = static_cast<Instruction::opcodes_e>(Opcode());
-
-    if ((opcode == Instruction::CMP) || (opcode == Instruction::HALT))
-    {
-        snprintf(buffer, sizeof(buffer), "%s", Instructions::Mnemonic(opcode));
-    }
-    else
-    {
-        snprintf(buffer, sizeof(buffer), "%s %" PRIu32, Instructions::Mnemonic(opcode), (uint32_t) lineNumber);
-    }
-
+    Disassemble(buffer, sizeof(buffer));
     return (string(buffer));
 }

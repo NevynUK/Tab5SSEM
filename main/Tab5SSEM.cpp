@@ -1,5 +1,5 @@
 /*-----------------------------------------------------------------------------
- * File        : Tab5Template.cpp
+ * File        : Tab5SSEM.cpp
  * Description : Application entry point for the M5Stack Tab5 SSEM emulator
  *               firmware.  Initialises all hardware peripherals and delegates
  *               the display pipeline to the SSEM Display component.
@@ -18,6 +18,7 @@
 
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <memory>
 
@@ -39,14 +40,14 @@
 using namespace std;
 
 /**
- * @brief Tagused for logging the main component.
+ * @brief Tag used for logging the main component.
  */
-const char *LOG_TAG = "Tab5SSEM";
+static const char *LOG_TAG = "Tab5SSEM";
 
 /**
  * @brief Global store lines instance used by the SSEM emulator.
  */
-StoreLines _storeLines;
+static StoreLines _storeLines;
 
 /**
  * @brief Global CPU instance used by the SSEM emulator.
@@ -144,7 +145,7 @@ void Setup(void)
 
     if (rtc != nullptr)
     {
-        struct tm setTime = {};
+        struct tm setTime{};
         setTime.tm_year = 2026 - 1900;
         setTime.tm_mon = 3 - 1; // March (0-based)
         setTime.tm_mday = 21;
@@ -174,7 +175,7 @@ static void PopulateDisplayMessage(Display::DisplayMessage &message, bool halted
     for (int i = 0; i < Display::STORELINE_COUNT; ++i)
     {
         message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
-        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
+        _storeLines[i].Disassemble(message.storelineText[i], sizeof(message.storelineText[i]));
     }
 
     message.enableStopRun = false;
@@ -212,8 +213,7 @@ vector<string> ReadSdCardFileNames()
 {
     ESP_LOGI(LOG_TAG, "SD card contents:");
 
-    static constexpr const char *SSEM_EXTENSION = ".ssem";
-    static constexpr size_t SSEM_EXTENSION_LENGTH = 5U;
+    static constexpr string_view SSEM_EXTENSION = ".ssem";
 
     vector<string> filenames;
 
@@ -229,14 +229,14 @@ vector<string> ReadSdCardFileNames()
             }
 
             const string name = ep->d_name;
-            if ((name.size() > SSEM_EXTENSION_LENGTH) && name.compare(name.size() - SSEM_EXTENSION_LENGTH, SSEM_EXTENSION_LENGTH, SSEM_EXTENSION) == 0)
+            if ((name.size() > SSEM_EXTENSION.size()) && name.ends_with(SSEM_EXTENSION))
             {
                 string fullPath = string(SDCard::MOUNT_POINT) + "/" + name;
                 struct stat fileInfo;
                 if (stat(fullPath.c_str(), &fileInfo) == 0)
                 {
                     ESP_LOGI(LOG_TAG, "    %s, %" PRIu32, ep->d_name, fileInfo.st_size);
-                    filenames.push_back(fullPath);
+                    filenames.emplace_back(move(fullPath));
                 }
                 else
                 {
@@ -291,8 +291,8 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
 
         if (!line.empty())
         {
-            lines.push_back(line);
             ESP_LOGI(LOG_TAG, "    %s", line.c_str());
+            lines.push_back(move(line));
         }
     }
 
@@ -397,6 +397,9 @@ void OnStopRunPressed(bool running)
     }
 }
 
+/**
+ * @brief Main program loop.
+ */
 extern "C" void app_main(void)
 {
     Setup();
@@ -442,7 +445,7 @@ extern "C" void app_main(void)
         // Force an initial update to the display.
         _storeLines.SetDirty(true);
 
-        while ((_stopRequested == false) && !_cpu->IsStopped())
+        while (!_stopRequested && !_cpu->IsStopped())
         {
             //
             //  If we are using the original speed setting then we wait for the timer ISR to notify the
