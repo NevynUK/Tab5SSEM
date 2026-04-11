@@ -289,7 +289,7 @@ void ClearStoreLinesAndUpdateDisplay()
         snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "JMP 0");
     }
 
-    message.controlState = nullptr;
+    message.enableStopRun = false;
     Display::PostMessage(message);
 
     _storeLines.Clear();
@@ -329,14 +329,8 @@ void LoadFile(const string &fullPath)
     _cpu->Reset();
 
     Display::DisplayMessage message = {};
-
-    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
-    {
-        message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
-        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
-    }
-
-    message.controlState = reinterpret_cast<void *>(1);
+    PopulateDisplayMessage(message, false);
+    message.enableStopRun = true;
     Display::PostMessage(message);
 
     // Strip directory prefix and .ssem extension for the header display name.
@@ -367,7 +361,7 @@ static void PopulateDisplayMessage(Display::DisplayMessage &message, bool halted
         snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
     }
 
-    message.controlState = nullptr;
+    message.enableStopRun = false;
     message.halted = halted;
 }
 
@@ -456,16 +450,11 @@ extern "C" void app_main(void)
             instructionCount++;
             _cpu->SingleStep();
             Display::DisplayMessage message = {};
-            for (int i = 0; i < Display::STORELINE_COUNT; ++i)
-            {
-                message.storelineValues[i] = _storeLines[i].GetValue();
-                snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
-            }
+            PopulateDisplayMessage(message, false);
             Display::PostMessage(message);
 
             const int64_t nowUs = esp_timer_get_time();
-            const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1000U) ||
-                                   ((nowUs - lastFooterUpdateUs) >= 1000000LL);
+            const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1'000U) || ((nowUs - lastFooterUpdateUs) >= 1'000'000LL);
             if (updateDue)
             {
                 struct timespec now;

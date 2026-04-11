@@ -94,9 +94,9 @@ public:
         char storelineText[STORELINE_COUNT][32];
 
         /**
-         * @brief When non-null, signals that the Stop/Run button should be enabled.
+         * @brief When true, signals that the Stop/Run button should be enabled.
          */
-        void *controlState;
+        bool enableStopRun;
 
         /**
          * @brief true when the CPU has halted; causes the display to restore the
