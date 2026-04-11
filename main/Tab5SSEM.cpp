@@ -33,6 +33,7 @@
 #include "StoreLines.hpp"
 #include "Compiler.hpp"
 #include "Instructions.hpp"
+#include "Utility.hpp"
 
 using namespace std;
 
@@ -158,6 +159,25 @@ void Setup(void)
 
     // Initialise the SSEM instructions lookup table.
     Instructions::PopulateLookupTable();
+}
+
+/**
+ * @brief Populate a DisplayMessage with the current store line values and labels.
+ *
+ * @param message  Message to populate.
+ * @param halted   true if the CPU has halted; causes the Display task to restore
+ *                 the full stopped UI state.
+ */
+static void PopulateDisplayMessage(Display::DisplayMessage &message, bool halted)
+{
+    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+    {
+        message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
+    }
+
+    message.enableStopRun = false;
+    message.halted = halted;
 }
 
 /**
@@ -347,25 +367,6 @@ void LoadFile(const string &fullPath)
 }
 
 /**
- * @brief Populate a DisplayMessage with the current store line values and labels.
- *
- * @param message  Message to populate.
- * @param halted   true if the CPU has halted; causes the Display task to restore
- *                 the full stopped UI state.
- */
-static void PopulateDisplayMessage(Display::DisplayMessage &message, bool halted)
-{
-    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
-    {
-        message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
-        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
-    }
-
-    message.enableStopRun = false;
-    message.halted = halted;
-}
-
-/**
  * @brief Invoked by the Display layer when the Stop/Run button is pressed.
  *
  * Sends a task notification to app_main to start execution when running is
@@ -474,7 +475,7 @@ extern "C" void app_main(void)
         clock_gettime(CLOCK_REALTIME, &end);
         double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
-        ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
+        ESP_LOGI(LOG_TAG, "CPU execution stopped after %s instructions.", Utility::FormatWithCommas(instructionCount).c_str());
         Display::UpdateFooter(instructionCount, elapsedTime);
         UpdateDisplayTube(_storeLines);
 

@@ -12,6 +12,7 @@
 
 #include "Display.hpp"
 #include "Touch.hpp"
+#include "Utility.hpp"
 #include <cstdio>
 #include <inttypes.h>
 #include <freertos/FreeRTOS.h>
@@ -451,34 +452,6 @@ void Display::DrawHeader()
 }
 
 /**
- * @brief Formats an unsigned 32-bit integer as a decimal string with comma
- *        thousands separators (e.g. 1234567 becomes "1,234,567").
- *
- * @param value   The value to format.
- * @param buffer  Destination buffer; must be at least 14 bytes (max
- *                10 digits + 3 commas + NUL).
- */
-static void FormatWithCommas(uint32_t value, char *buffer)
-{
-    char raw[11];
-    snprintf(raw, sizeof(raw), "%" PRIu32, value);
-
-    const int rawLength = static_cast<int>(strlen(raw));
-    int outIndex = 0;
-
-    for (int i = 0; i < rawLength; ++i)
-    {
-        if (i > 0 && ((rawLength - i) % 3) == 0)
-        {
-            buffer[outIndex++] = ',';
-        }
-        buffer[outIndex++] = raw[i];
-    }
-
-    buffer[outIndex] = '\0';
-}
-
-/**
  * @brief Draws the footer bar across the bottom of the screen.
  *
  * White background, black text, left-aligned, using Font2 (~8 px).
@@ -493,11 +466,8 @@ void Display::DrawFooter()
     _display->setTextColor(TFT_BLACK, TFT_WHITE);
     _display->setTextDatum(textdatum_t::middle_left);
 
-    char countText[14];
-    FormatWithCommas(_instructionCount, countText);
-
     char footerText[64];
-    snprintf(footerText, sizeof(footerText), "Instructions: %s  Time: %.2f s", countText, _elapsedSeconds);
+    snprintf(footerText, sizeof(footerText), "Instructions: %s  Time: %.2f s", Utility::FormatWithCommas(_instructionCount).c_str(), _elapsedSeconds);
     _display->drawString(footerText, 8, footerY + FOOTER_HEIGHT / 2);
 
     _display->endWrite();
