@@ -270,7 +270,8 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
 {
     vector<string> lines;
 
-    FILE *file = fopen(fullPath.c_str(), "r");
+    auto fileDeleter = [](FILE *f) { if (f != nullptr) fclose(f); };
+    unique_ptr<FILE, decltype(fileDeleter)> file(fopen(fullPath.c_str(), "r"), fileDeleter);
     if (file == nullptr)
     {
         ESP_LOGE(LOG_TAG, "Failed to open file %s: %s", fullPath.c_str(), strerror(errno));
@@ -280,7 +281,7 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
     ESP_LOGI(LOG_TAG, "Reading file %s:", fullPath.c_str());
 
     char buffer[256];
-    while (fgets(buffer, sizeof(buffer), file) != nullptr)
+    while (fgets(buffer, sizeof(buffer), file.get()) != nullptr)
     {
         string line = buffer;
 
@@ -296,7 +297,6 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
         }
     }
 
-    fclose(file);
     return (lines);
 }
 
