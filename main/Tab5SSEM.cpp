@@ -437,6 +437,9 @@ extern "C" void app_main(void)
         uint32_t lastFooterUpdateCount = 0;
         int64_t lastFooterUpdateUs = esp_timer_get_time();
 
+        ESP_LOGI(LOG_TAG, "Program loaded, starting execution");
+        UpdateDisplayTube(_storeLines);
+
         while ((_stopRequested == false) && !_cpu->IsStopped())
         {
             //
