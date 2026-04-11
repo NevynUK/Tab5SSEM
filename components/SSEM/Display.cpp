@@ -15,11 +15,6 @@
 #include "Utility.hpp"
 #include <cstdio>
 #include <inttypes.h>
-#include <string>
-#include <vector>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 using namespace std;
