@@ -145,7 +145,7 @@ void Setup(void)
 
     if (rtc != nullptr)
     {
-        struct tm setTime {};
+        struct tm setTime = {};
         setTime.tm_year = 2026 - 1900;
         setTime.tm_mon = 3 - 1; // March (0-based)
         setTime.tm_mday = 21;
