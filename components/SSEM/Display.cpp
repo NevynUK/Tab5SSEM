@@ -12,10 +12,12 @@
 
 #include "Display.hpp"
 #include "Touch.hpp"
+#include "Utility.hpp"
 #include <cstdio>
 #include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 // ---------------------------------------------------------------------------
@@ -103,9 +105,33 @@ Display::StopRunCallback Display::_stopRunCallback = nullptr;
 Display::LoadCallback Display::_loadCallback = nullptr;
 
 /**
+ * @brief Name of the currently loaded program; empty when none is loaded.
+ */
+string Display::_loadedProgram;
+
+/**
+ * @brief Instruction count displayed in the footer during and after execution.
+ */
+uint32_t Display::_instructionCount = 0;
+
+/**
+ * @brief Elapsed execution time in seconds displayed in the footer.
+ */
+double Display::_elapsedSeconds = 0.0;
+
+/**
  * @brief FreeRTOS queue handle; created by Run() before the Display task is started.
  */
 QueueHandle_t Display::_queue = nullptr;
+
+/**
+ * @brief Mutex that serialises all M5GFX draw calls.
+ *
+ * Taken by the DisplayTask for each queue message and by every public method
+ * that writes directly to the display, preventing concurrent framebuffer
+ * access from multiple FreeRTOS tasks.
+ */
+SemaphoreHandle_t Display::_displayMutex = nullptr;
 
 // ---------------------------------------------------------------------------
 // Public methods
@@ -141,6 +167,7 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
     TouchInput::GetInstance()->AddCallback(OnPanelTouch);
 
     _queue = xQueueCreate(4, sizeof(DisplayMessage));
+    _displayMutex = xSemaphoreCreateMutex();
     xTaskCreate(DisplayTask, "DisplayTask", 8192, nullptr, 5, nullptr);
 }
 
@@ -153,10 +180,13 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
  */
 void Display::SetRunning(bool running)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _running = running;
     DrawRunningIndicator();
+    DrawFileList();
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -169,12 +199,14 @@ void Display::SetRunning(bool running)
  */
 void Display::SetFiles(const vector<string> &files)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _files = files;
     _selectedFile = -1;
     _scrollOffset = 0;
     DrawFileList();
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -186,9 +218,11 @@ void Display::SetFiles(const vector<string> &files)
  */
 void Display::SetLoadEnabled(bool enabled)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _loadEnabled = enabled;
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -200,13 +234,71 @@ void Display::SetLoadEnabled(bool enabled)
  */
 void Display::SetStopRunEnabled(bool enabled)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _stopRunEnabled = enabled;
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
- * @brief Returns the currently selected execution speed.
+ * @brief Sets the enabled state of the speed radio buttons.
+ *
+ * Redraws the speed section to reflect the new state.
+ *
+ * @param enabled  true to enable the speed buttons; false to disable them.
+ */
+void Display::SetSpeedEnabled(bool enabled)
+{
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    _speedEnabled = enabled;
+    DrawSpeedSection();
+    _display->display();
+    xSemaphoreGive(_displayMutex);
+}
+
+/**
+ * @brief Sets the name of the currently loaded program.
+ *
+ * Updates the header to display the program name in brackets beside the
+ * title.  Pass an empty string to clear the name.
+ *
+ * @param name  Program name to display (typically the filename without path
+ *              or extension).
+ */
+void Display::SetProgramName(const string &name)
+{
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    _loadedProgram = name;
+    _instructionCount = 0;
+    _elapsedSeconds = 0.0;
+    DrawHeader();
+    DrawFooter();
+    _display->display();
+    xSemaphoreGive(_displayMutex);
+}
+
+/**
+ * @brief Updates the footer with the current instruction count and elapsed time.
+ *
+ * Redraws the footer bar in place without touching any other region of the
+ * display.
+ *
+ * @param instructionCount  Total number of instructions executed so far.
+ * @param elapsedSeconds    Wall-clock execution time in seconds.
+ */
+void Display::UpdateFooter(uint32_t instructionCount, double elapsedSeconds)
+{
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    _instructionCount = instructionCount;
+    _elapsedSeconds = elapsedSeconds;
+    DrawFooter();
+    _display->display();
+    xSemaphoreGive(_displayMutex);
+}
+
+/**
+ * @brief Retrieves the current speed setting.
  *
  * @return SpeedSetting  The active speed mode (Maximum or Original).
  */
@@ -346,7 +438,17 @@ void Display::DrawHeader()
     _display->setFont(&fonts::Font4);
     _display->setTextColor(TFT_BLACK, TFT_WHITE);
     _display->setTextDatum(textdatum_t::middle_center);
-    _display->drawString("SSEM - Manchester Baby", _display->width() / 2, HEADER_HEIGHT / 2);
+
+    if (_loadedProgram.empty())
+    {
+        _display->drawString("SSEM - Manchester Baby", _display->width() / 2, HEADER_HEIGHT / 2);
+    }
+    else
+    {
+        const string title = "SSEM - Manchester Baby (" + _loadedProgram + ")";
+        _display->drawString(title.c_str(), _display->width() / 2, HEADER_HEIGHT / 2);
+    }
+
     _display->endWrite();
 }
 
@@ -364,7 +466,11 @@ void Display::DrawFooter()
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_BLACK, TFT_WHITE);
     _display->setTextDatum(textdatum_t::middle_left);
-    _display->drawString("SSEM Emulator", 8, footerY + FOOTER_HEIGHT / 2);
+
+    char footerText[64];
+    snprintf(footerText, sizeof(footerText), "Instructions: %s  Time: %.2f s", Utility::FormatWithCommas(_instructionCount).c_str(), _elapsedSeconds);
+    _display->drawString(footerText, 8, footerY + FOOTER_HEIGHT / 2);
+
     _display->endWrite();
 }
 
@@ -934,7 +1040,7 @@ bool Display::PostMessage(const DisplayMessage &message)
  * Blocks indefinitely on _queue.  On each message received, copies the
  * storeline values and text labels into the static members then redraws
  * all storeline rows and flushes the framebuffer.  If the message carries
- * a non-null controlState, the Stop/Run button is also enabled and redrawn
+ * enableStopRun set to true, the Stop/Run button is also enabled and redrawn
  * in the same pass, avoiding concurrent drawing from other tasks.
  *
  * @param parameter  Unused; required by the FreeRTOS task signature.
@@ -949,6 +1055,8 @@ void Display::DisplayTask(void *parameter)
     {
         if (xQueueReceive(_queue, &message, portMAX_DELAY) == pdTRUE)
         {
+            xSemaphoreTake(_displayMutex, portMAX_DELAY);
+
             for (int i = 0; i < STORELINE_COUNT; ++i)
             {
                 if (_store[i] != message.storelineValues[i])
@@ -965,13 +1073,25 @@ void Display::DisplayTask(void *parameter)
 
             DrawAllStorelines();
 
-            if (message.controlState != nullptr)
+            if (message.enableStopRun)
             {
                 _stopRunEnabled = true;
                 DrawActionButtons();
             }
 
+            if (message.halted)
+            {
+                _running = false;
+                _speedEnabled = true;
+                _loadEnabled = (_selectedFile >= 0);
+                DrawRunningIndicator();
+                DrawSpeedSection();
+                DrawFileList();
+                DrawActionButtons();
+            }
+
             _display->display();
+            xSemaphoreGive(_displayMutex);
         }
     }
 }

@@ -22,6 +22,35 @@ The header font is 14 pixels.
 
 The footer font is 12 pixels.
 
+### Header
+
+The header always shows the title **SSEM - Manchester Baby**.
+
+When a program is loaded, the program name (filename stem, without path or `.ssem` extension) is appended in brackets:
+
+```
+SSEM - Manchester Baby (Add)
+```
+
+The header is redrawn whenever a new program is loaded via `Display::SetProgramName(const string &name)`.  Passing an empty string clears the program name and reverts to the plain title.
+
+### Footer
+
+The footer displays execution statistics:
+
+```
+Instructions: 1,234,567  Time: 3.14 s
+```
+
+| Field | Format | Initial value |
+|---|---|---|
+| Instruction count | Decimal with comma thousands separators | 0 |
+| Elapsed time | Seconds to two decimal places | 0.00 |
+
+The footer is updated via `Display::UpdateFooter(uint32_t instructionCount, double elapsedSeconds)`.
+
+Loading a program resets both values to zero and redraws the footer immediately (as part of `SetProgramName`).
+
 ### Centre Panel
 
 The centre panel is divided into four sections from left to right:
@@ -82,6 +111,8 @@ A white-bordered rounded rectangle (48 pixels tall, corner radius 8 pixels) span
 
 The indicator is redrawn whenever the running state changes.  It can also be updated programmatically via `Display::SetRunning(bool running)`.
 
+When program execution completes (CPU halted or user pressed Stop), `Display::SetRunning(false)` is called from `app_main`, which redraws the indicator, file list, and action buttons in a single atomic operation.
+
 ### Speed Radio Buttons
 
 A "Speed:" label appears above two side-by-side radio buttons:
@@ -95,7 +126,7 @@ The selected option has its inner circle filled white; the unselected option has
 
 The currently selected speed is available via `Display::GetSpeed()`, which returns a `Display::SpeedSetting` enum value.  The default on startup is `SpeedSetting::Maximum`.
 
-**Disabled state**: while the SSEM CPU is executing, the speed section is rendered entirely in dark grey (label, radio-button outlines, inner fills, and option text).  Touch events on the speed radio buttons are ignored.  The section is re-enabled when execution stops.
+**Disabled state**: while the SSEM CPU is executing, the speed section is rendered entirely in dark grey (label, radio-button outlines, inner fills, and option text).  Touch events on the speed radio buttons are ignored.  The section is re-enabled when execution stops via `Display::SetSpeedEnabled(bool enabled)`.
 
 ### Files
 
@@ -168,6 +199,8 @@ The callback is registered via `Display::SetStopRunCallback()`.
 
 The Display code runs in a dedicated FreeRTOS task (`DisplayTask`, stack 8192 bytes, priority 5).  Communication uses a depth-4 message queue; `PostMessage()` blocks until the message is accepted.
 
+All M5GFX draw calls — whether from `DisplayTask` or from public methods called directly from `app_main` (e.g. `UpdateFooter`, `SetRunning`) — are serialised by a FreeRTOS mutex (`_displayMutex`).  Every public method that touches the display takes the mutex before the first draw call and releases it after `display()` returns.
+
 ### Message Definition (`DisplayMessage`)
 
 The message holds a complete snapshot of the display state:
@@ -177,6 +210,7 @@ The message holds a complete snapshot of the display state:
 | `storelineValues` | `uint32_t[32]` | Current value of each storeline word |
 | `storelineText` | `char[32][32]` | Mnemonic label for each storeline |
 | `controlState` | `void *` | `nullptr` = no change to Stop/Run state; non-null = enable the Stop/Run button |
+| `halted` | `bool` | When `true`, restores the full stopped UI state (indicator, speed section, file list, buttons) |
 
 ### Display Task Behaviour
 
@@ -207,10 +241,28 @@ When the Load button is pressed and a valid file is selected, `LoadFile` is invo
 3. Destroys any existing `Cpu` instance and creates a new one from the compiled store lines.
 4. Calls `Cpu::Reset()`.
 5. Posts a `DisplayMessage` with the compiled storeline values and disassembled mnemonics, and `controlState` set to a non-null sentinel value to enable the Stop/Run button.
+6. Strips the directory prefix and `.ssem` extension from the file path to derive the program name, then calls `Display::SetProgramName()`.  This updates the header, resets the footer counters to zero, and redraws the footer.
 
 ### Stop/Run Callback Behaviour (`OnStopRunPressed` callback)
 
 `OnStopRunPressed(bool running)` is invoked by the Display layer after the button state and all visual updates have been applied.  It receives the new intended running state (`true` = start execution, `false` = stop) and is responsible for starting or stopping the SSEM CPU accordingly.
+
+#### Execution loop and footer updates
+
+While the CPU is running, `app_main` calls `Display::UpdateFooter(instructionCount, elapsedSeconds)` whenever either of the following conditions is met:
+
+- 1,000 or more instructions have been executed since the last footer update.
+- 1 second or more has elapsed since the last footer update.
+
+A final `UpdateFooter` call is made with the definitive values immediately after the execution loop exits.
+
+#### Post-execution UI restore
+
+After the execution loop exits (CPU halted or user stopped), `app_main` calls the following sequence to restore the full stopped UI state:
+
+1. `Display::SetRunning(false)` — indicator → **Halted**, button label → **Run**, file list re-enabled.
+2. `Display::SetSpeedEnabled(true)` — speed radio buttons re-enabled.
+3. `Display::SetLoadEnabled(true)` — Load button re-enabled.
 
 #### Load Button
 

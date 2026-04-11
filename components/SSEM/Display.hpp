@@ -16,6 +16,7 @@
 #include "SDCard.hpp"
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 #include <functional>
 #include <string>
 #include <vector>
@@ -93,9 +94,15 @@ public:
         char storelineText[STORELINE_COUNT][32];
 
         /**
-         * @brief Reserved — always nullptr for now.
+         * @brief When true, signals that the Stop/Run button should be enabled.
          */
-        void *controlState;
+        bool enableStopRun;
+
+        /**
+         * @brief true when the CPU has halted; causes the display to restore the
+         *        full stopped UI state (indicator, speed section, file list, buttons).
+         */
+        bool halted;
     };
 
     static void Run(M5GFX &display, SDCard *sdCard);
@@ -105,6 +112,9 @@ public:
     static void SetFiles(const vector<string> &files);
     static void SetLoadEnabled(bool enabled);
     static void SetStopRunEnabled(bool enabled);
+    static void SetSpeedEnabled(bool enabled);
+    static void SetProgramName(const string &name);
+    static void UpdateFooter(uint32_t instructionCount, double elapsedSeconds);
 
     static SpeedSetting GetSpeed();
 
@@ -182,6 +192,23 @@ private:
     static bool _prevTouched;
     static StopRunCallback _stopRunCallback;
     static LoadCallback _loadCallback;
+
+    /**
+     * @brief Name of the currently loaded program; empty when none is loaded.
+     *
+     * Displayed in the header enclosed in brackets when non-empty.
+     */
+    static string _loadedProgram;
+
+    /**
+     * @brief Instruction count shown in the footer during and after execution.
+     */
+    static uint32_t _instructionCount;
+
+    /**
+     * @brief Elapsed execution time in seconds shown in the footer.
+     */
+    static double _elapsedSeconds;
 
     /**
      * @brief Number of LEDs per storeline (one per bit).
@@ -320,6 +347,12 @@ private:
      * @brief FreeRTOS queue handle for receiving DisplayMessage updates.
      */
     static QueueHandle_t _queue;
+
+    /**
+     * @brief Mutex that serialises all M5GFX draw calls between the DisplayTask
+     *        and public methods called from other task contexts.
+     */
+    static SemaphoreHandle_t _displayMutex;
 
     static void DisplayTask(void *parameter);
 };
