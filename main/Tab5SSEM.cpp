@@ -276,12 +276,14 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
         return (lines);
     }
 
+    ESP_LOGI(LOG_TAG, "Reading file %s:", fullPath.c_str());
+
     char buffer[256];
     while (fgets(buffer, sizeof(buffer), file) != nullptr)
     {
         string line = buffer;
 
-        while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+        while (!line.empty() && ((line.back() == '\n') || (line.back() == '\r')))
         {
             line.pop_back();
         }
@@ -289,6 +291,7 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
         if (!line.empty())
         {
             lines.push_back(line);
+            ESP_LOGI(LOG_TAG, "    %s", line.c_str());
         }
     }
 
