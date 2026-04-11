@@ -971,6 +971,17 @@ void Display::DisplayTask(void *parameter)
                 DrawActionButtons();
             }
 
+            if (message.halted)
+            {
+                _running = false;
+                _speedEnabled = true;
+                _loadEnabled = (_selectedFile >= 0);
+                DrawRunningIndicator();
+                DrawSpeedSection();
+                DrawFileList();
+                DrawActionButtons();
+            }
+
             _display->display();
         }
     }

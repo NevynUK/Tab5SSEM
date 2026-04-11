@@ -14,6 +14,7 @@
 #include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <esp_timer.h>
 
 #include <cstdio>
 #include <string>
@@ -50,9 +51,58 @@ StoreLines _storeLines;
 Cpu *_cpu = nullptr;
 
 /**
+ * @brief Handle of the app_main task; used by OnStopRunPressed to send a run
+ *        notification that wakes the execution loop.
+ */
+static TaskHandle_t _appMainTaskHandle = nullptr;
+
+/**
+ * @brief Set to true by OnStopRunPressed(false) to request execution to stop.
+ *
+ * Read by the execution loop in app_main; written by the touch callback from
+ * the TouchTask context.  Declared volatile to prevent compiler optimisation
+ * across task boundaries.
+ */
+static volatile bool _stopRequested = false;
+
+/**
+ * @brief Store the speed setting for this run.
+ * 
+ * @note This global does not need protecting from access as it can only be changed when a program
+ *       is not running as the controls are disabled when the Run button is pressed.
+ */
+static Display::SpeedSetting _speedSetting = Display::SpeedSetting::Original;
+
+/**
+ * @brief Handle for the 1 ms system timer.
+ *
+ * Created in Setup() via esp_timer_create() and left in the stopped state
+ * until explicitly started via esp_timer_start_periodic().
+ */
+static esp_timer_handle_t _systemTimerHandle = nullptr;
+
+/**
  * @brief Global display instance used by M5GFX and the SSEM Display component.
  */
 M5GFX display;
+
+/**
+ * @brief 1 ms system timer callback.
+ *
+ * Invoked by the esp_timer dispatch task every millisecond once the timer
+ * has been started.  Add periodic housekeeping logic here as required.
+ *
+ * @param arg  User-supplied argument passed to esp_timer_create(); unused.
+ */
+static void SystemTimerCallback(void *__attribute__((unused)) arg)
+{
+    if (_appMainTaskHandle != nullptr)
+    {
+        BaseType_t higherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(_appMainTaskHandle, &higherPriorityTaskWoken);
+        portYIELD_FROM_ISR(higherPriorityTaskWoken);
+    }
+}
 
 /**
  * @brief One-time application setup.
@@ -64,6 +114,18 @@ M5GFX display;
  */
 void Setup(void)
 {
+    // Create the 1 ms system timer in the stopped state.  Start it with
+    // esp_timer_start_periodic(_systemTimerHandle, 1000) when required.
+    const esp_timer_create_args_t timerArgs =
+    {
+        .callback        = SystemTimerCallback,
+        .arg             = nullptr,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name            = "system_timer",
+        .skip_unhandled_events = false,
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&timerArgs, &_systemTimerHandle));
+
     // Tab5 native panel is portrait (720×1280).
     // Rotation 3 = landscape rotated 180 degrees (1280×720).
     display.init();
@@ -281,10 +343,30 @@ void LoadFile(const string &fullPath)
 }
 
 /**
+ * @brief Populate a DisplayMessage with the current store line values and labels.
+ *
+ * @param message  Message to populate.
+ * @param halted   true if the CPU has halted; causes the Display task to restore
+ *                 the full stopped UI state.
+ */
+static void PopulateDisplayMessage(Display::DisplayMessage &message, bool halted)
+{
+    for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+    {
+        message.storelineValues[i] = static_cast<uint32_t>(_storeLines[i].GetValue());
+        snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
+    }
+
+    message.controlState = nullptr;
+    message.halted = halted;
+}
+
+/**
  * @brief Invoked by the Display layer when the Stop/Run button is pressed.
  *
- * Receives the new intended running state and is responsible for starting
- * or stopping SSEM CPU execution accordingly.
+ * Sends a task notification to app_main to start execution when running is
+ * true, or sets _stopRequested to interrupt the running execution loop when
+ * running is false.
  *
  * @param running  true if the user has requested execution to start;
  *                 false if the user has requested execution to stop.
@@ -294,10 +376,21 @@ void OnStopRunPressed(bool running)
     if (running)
     {
         ESP_LOGI(LOG_TAG, "Run requested");
+
+        if (_cpu == nullptr)
+        {
+            ESP_LOGW(LOG_TAG, "Run requested but no program is loaded");
+            return;
+        }
+
+        _cpu->Reset();
+        _stopRequested = false;
+        xTaskNotifyGive(_appMainTaskHandle);
     }
     else
     {
         ESP_LOGI(LOG_TAG, "Stop requested");
+        _stopRequested = true;
     }
 }
 
@@ -317,5 +410,53 @@ extern "C" void app_main(void)
         Display::SetFiles(filenames);
     }
 
-    vTaskDelete(nullptr);
+    // Save this task handle so OnStopRunPressed can send a run and single step notification.
+    _appMainTaskHandle = xTaskGetCurrentTaskHandle();
+
+    // 
+    while (true)
+    {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        //
+        //  At this point the UI has sent a message to run the application.
+        //
+        _speedSetting = Display::GetSpeed();
+        uint32_t instructionCount = 0;
+        struct timespec start;
+        clock_gettime(CLOCK_REALTIME, &start);
+
+        if (_speedSetting == Display::SpeedSetting::Original)
+        {
+            esp_timer_start_periodic(_systemTimerHandle, 1000);
+        }
+
+        while ((_stopRequested == false) && !_cpu->IsStopped())
+        {
+            //
+            //  If we are using the original speed setting then we wait for the timer ISR to notify the
+            //  task that we are OK to proceed with the next instruction.
+            //
+            if (_speedSetting == Display::SpeedSetting::Original)
+            {
+                ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            }
+            instructionCount++;
+            _cpu->SingleStep();
+            Display::DisplayMessage message = {};
+            for (int i = 0; i < Display::STORELINE_COUNT; ++i)
+            {
+                message.storelineValues[i] = _storeLines[i].GetValue();
+                snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
+            }
+            Display::PostMessage(message);
+        }
+
+        esp_timer_stop(_systemTimerHandle);         // Stop the timer if it is running, we don't worry if it isn't and we discard the result.
+        struct timespec end;
+        clock_gettime(CLOCK_REALTIME, &end);
+        double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+        ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
+        ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
+        UpdateDisplayTube(_storeLines);
+    }
 }

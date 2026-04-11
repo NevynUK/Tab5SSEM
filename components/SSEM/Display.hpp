@@ -93,9 +93,15 @@ public:
         char storelineText[STORELINE_COUNT][32];
 
         /**
-         * @brief Reserved — always nullptr for now.
+         * @brief When non-null, signals that the Stop/Run button should be enabled.
          */
         void *controlState;
+
+        /**
+         * @brief true when the CPU has halted; causes the display to restore the
+         *        full stopped UI state (indicator, speed section, file list, buttons).
+         */
+        bool halted;
     };
 
     static void Run(M5GFX &display, SDCard *sdCard);
