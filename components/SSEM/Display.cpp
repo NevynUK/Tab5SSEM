@@ -16,6 +16,7 @@
 #include <inttypes.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 // ---------------------------------------------------------------------------
@@ -103,9 +104,33 @@ Display::StopRunCallback Display::_stopRunCallback = nullptr;
 Display::LoadCallback Display::_loadCallback = nullptr;
 
 /**
+ * @brief Name of the currently loaded program; empty when none is loaded.
+ */
+string Display::_loadedProgram;
+
+/**
+ * @brief Instruction count displayed in the footer during and after execution.
+ */
+uint32_t Display::_instructionCount = 0;
+
+/**
+ * @brief Elapsed execution time in seconds displayed in the footer.
+ */
+double Display::_elapsedSeconds = 0.0;
+
+/**
  * @brief FreeRTOS queue handle; created by Run() before the Display task is started.
  */
 QueueHandle_t Display::_queue = nullptr;
+
+/**
+ * @brief Mutex that serialises all M5GFX draw calls.
+ *
+ * Taken by the DisplayTask for each queue message and by every public method
+ * that writes directly to the display, preventing concurrent framebuffer
+ * access from multiple FreeRTOS tasks.
+ */
+SemaphoreHandle_t Display::_displayMutex = nullptr;
 
 // ---------------------------------------------------------------------------
 // Public methods
@@ -141,6 +166,7 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
     TouchInput::GetInstance()->AddCallback(OnPanelTouch);
 
     _queue = xQueueCreate(4, sizeof(DisplayMessage));
+    _displayMutex = xSemaphoreCreateMutex();
     xTaskCreate(DisplayTask, "DisplayTask", 8192, nullptr, 5, nullptr);
 }
 
@@ -153,11 +179,13 @@ void Display::Run(M5GFX &display, SDCard *sdCard)
  */
 void Display::SetRunning(bool running)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _running = running;
     DrawRunningIndicator();
     DrawFileList();
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -170,12 +198,14 @@ void Display::SetRunning(bool running)
  */
 void Display::SetFiles(const vector<string> &files)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _files = files;
     _selectedFile = -1;
     _scrollOffset = 0;
     DrawFileList();
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -187,9 +217,11 @@ void Display::SetFiles(const vector<string> &files)
  */
 void Display::SetLoadEnabled(bool enabled)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _loadEnabled = enabled;
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -201,9 +233,11 @@ void Display::SetLoadEnabled(bool enabled)
  */
 void Display::SetStopRunEnabled(bool enabled)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _stopRunEnabled = enabled;
     DrawActionButtons();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
@@ -215,13 +249,54 @@ void Display::SetStopRunEnabled(bool enabled)
  */
 void Display::SetSpeedEnabled(bool enabled)
 {
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
     _speedEnabled = enabled;
     DrawSpeedSection();
     _display->display();
+    xSemaphoreGive(_displayMutex);
 }
 
 /**
- * @brief Returns the currently selected execution speed.
+ * @brief Sets the name of the currently loaded program.
+ *
+ * Updates the header to display the program name in brackets beside the
+ * title.  Pass an empty string to clear the name.
+ *
+ * @param name  Program name to display (typically the filename without path
+ *              or extension).
+ */
+void Display::SetProgramName(const string &name)
+{
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    _loadedProgram = name;
+    _instructionCount = 0;
+    _elapsedSeconds = 0.0;
+    DrawHeader();
+    DrawFooter();
+    _display->display();
+    xSemaphoreGive(_displayMutex);
+}
+
+/**
+ * @brief Updates the footer with the current instruction count and elapsed time.
+ *
+ * Redraws the footer bar in place without touching any other region of the
+ * display.
+ *
+ * @param instructionCount  Total number of instructions executed so far.
+ * @param elapsedSeconds    Wall-clock execution time in seconds.
+ */
+void Display::UpdateFooter(uint32_t instructionCount, double elapsedSeconds)
+{
+    xSemaphoreTake(_displayMutex, portMAX_DELAY);
+    _instructionCount = instructionCount;
+    _elapsedSeconds = elapsedSeconds;
+    DrawFooter();
+    _display->display();
+    xSemaphoreGive(_displayMutex);
+}
+/**
+ * @brief Retrieves the current speed setting.
  *
  * @return SpeedSetting  The active speed mode (Maximum or Original).
  */
@@ -361,8 +436,46 @@ void Display::DrawHeader()
     _display->setFont(&fonts::Font4);
     _display->setTextColor(TFT_BLACK, TFT_WHITE);
     _display->setTextDatum(textdatum_t::middle_center);
-    _display->drawString("SSEM - Manchester Baby", _display->width() / 2, HEADER_HEIGHT / 2);
+
+    if (_loadedProgram.empty())
+    {
+        _display->drawString("SSEM - Manchester Baby", _display->width() / 2, HEADER_HEIGHT / 2);
+    }
+    else
+    {
+        const string title = "SSEM - Manchester Baby (" + _loadedProgram + ")";
+        _display->drawString(title.c_str(), _display->width() / 2, HEADER_HEIGHT / 2);
+    }
+
     _display->endWrite();
+}
+
+/**
+ * @brief Formats an unsigned 32-bit integer as a decimal string with comma
+ *        thousands separators (e.g. 1234567 becomes "1,234,567").
+ *
+ * @param value   The value to format.
+ * @param buffer  Destination buffer; must be at least 14 bytes (max
+ *                10 digits + 3 commas + NUL).
+ */
+static void FormatWithCommas(uint32_t value, char *buffer)
+{
+    char raw[11];
+    snprintf(raw, sizeof(raw), "%" PRIu32, value);
+
+    const int rawLength = static_cast<int>(strlen(raw));
+    int outIndex = 0;
+
+    for (int i = 0; i < rawLength; ++i)
+    {
+        if (i > 0 && ((rawLength - i) % 3) == 0)
+        {
+            buffer[outIndex++] = ',';
+        }
+        buffer[outIndex++] = raw[i];
+    }
+
+    buffer[outIndex] = '\0';
 }
 
 /**
@@ -379,7 +492,14 @@ void Display::DrawFooter()
     _display->setFont(&fonts::Font2);
     _display->setTextColor(TFT_BLACK, TFT_WHITE);
     _display->setTextDatum(textdatum_t::middle_left);
-    _display->drawString("SSEM Emulator", 8, footerY + FOOTER_HEIGHT / 2);
+
+    char countText[14];
+    FormatWithCommas(_instructionCount, countText);
+
+    char footerText[64];
+    snprintf(footerText, sizeof(footerText), "Instructions: %s  Time: %.2f s", countText, _elapsedSeconds);
+    _display->drawString(footerText, 8, footerY + FOOTER_HEIGHT / 2);
+
     _display->endWrite();
 }
 
@@ -964,6 +1084,8 @@ void Display::DisplayTask(void *parameter)
     {
         if (xQueueReceive(_queue, &message, portMAX_DELAY) == pdTRUE)
         {
+            xSemaphoreTake(_displayMutex, portMAX_DELAY);
+
             for (int i = 0; i < STORELINE_COUNT; ++i)
             {
                 if (_store[i] != message.storelineValues[i])
@@ -998,6 +1120,7 @@ void Display::DisplayTask(void *parameter)
             }
 
             _display->display();
+            xSemaphoreGive(_displayMutex);
         }
     }
 }

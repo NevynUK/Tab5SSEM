@@ -339,6 +339,16 @@ void LoadFile(const string &fullPath)
     message.controlState = reinterpret_cast<void *>(1);
     Display::PostMessage(message);
 
+    // Strip directory prefix and .ssem extension for the header display name.
+    const size_t slashPos = fullPath.rfind('/');
+    string programName = (slashPos != string::npos) ? fullPath.substr(slashPos + 1) : fullPath;
+    const size_t dotPos = programName.rfind('.');
+    if (dotPos != string::npos)
+    {
+        programName = programName.substr(0, dotPos);
+    }
+    Display::SetProgramName(programName);
+
     ESP_LOGI(LOG_TAG, "File loaded: %s", fullPath.c_str());
 }
 
@@ -430,6 +440,9 @@ extern "C" void app_main(void)
             esp_timer_start_periodic(_systemTimerHandle, 1000);
         }
 
+        uint32_t lastFooterUpdateCount = 0;
+        int64_t lastFooterUpdateUs = esp_timer_get_time();
+
         while ((_stopRequested == false) && !_cpu->IsStopped())
         {
             //
@@ -449,6 +462,19 @@ extern "C" void app_main(void)
                 snprintf(message.storelineText[i], sizeof(message.storelineText[i]), "%s", _storeLines[i].Disassemble().c_str());
             }
             Display::PostMessage(message);
+
+            const int64_t nowUs = esp_timer_get_time();
+            const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1000U) ||
+                                   ((nowUs - lastFooterUpdateUs) >= 1000000LL);
+            if (updateDue)
+            {
+                struct timespec now;
+                clock_gettime(CLOCK_REALTIME, &now);
+                const double elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
+                Display::UpdateFooter(instructionCount, elapsed);
+                lastFooterUpdateCount = instructionCount;
+                lastFooterUpdateUs = nowUs;
+            }
         }
 
         esp_timer_stop(_systemTimerHandle);         // Stop the timer if it is running, we don't worry if it isn't and we discard the result.
@@ -457,6 +483,7 @@ extern "C" void app_main(void)
         double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
         ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
+        Display::UpdateFooter(instructionCount, elapsedTime);
         UpdateDisplayTube(_storeLines);
 
         Display::SetRunning(false);
