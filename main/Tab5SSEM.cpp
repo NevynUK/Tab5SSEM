@@ -145,7 +145,7 @@ void Setup(void)
 
     if (rtc != nullptr)
     {
-        struct tm setTime{};
+        struct tm setTime {};
         setTime.tm_year = 2026 - 1900;
         setTime.tm_mon = 3 - 1; // March (0-based)
         setTime.tm_mday = 21;
@@ -270,7 +270,10 @@ vector<string> ReadSdCardFileContents(const string &fullPath)
 {
     vector<string> lines;
 
-    auto fileDeleter = [](FILE *f) { if (f != nullptr) fclose(f); };
+    auto fileDeleter = [](FILE *f) {
+        if (f != nullptr)
+            fclose(f);
+    };
     unique_ptr<FILE, decltype(fileDeleter)> file(fopen(fullPath.c_str(), "r"), fileDeleter);
     if (file == nullptr)
     {
