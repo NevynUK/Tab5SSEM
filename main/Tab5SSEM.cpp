@@ -458,5 +458,9 @@ extern "C" void app_main(void)
         ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
         ESP_LOGI(LOG_TAG, "CPU execution stopped after %" PRIu32 " instructions.", instructionCount);
         UpdateDisplayTube(_storeLines);
+
+        Display::SetRunning(false);
+        Display::SetSpeedEnabled(true);
+        Display::SetLoadEnabled(true);
     }
 }

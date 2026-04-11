@@ -155,6 +155,7 @@ void Display::SetRunning(bool running)
 {
     _running = running;
     DrawRunningIndicator();
+    DrawFileList();
     DrawActionButtons();
     _display->display();
 }
@@ -202,6 +203,20 @@ void Display::SetStopRunEnabled(bool enabled)
 {
     _stopRunEnabled = enabled;
     DrawActionButtons();
+    _display->display();
+}
+
+/**
+ * @brief Sets the enabled state of the speed radio buttons.
+ *
+ * Redraws the speed section to reflect the new state.
+ *
+ * @param enabled  true to enable the speed buttons; false to disable them.
+ */
+void Display::SetSpeedEnabled(bool enabled)
+{
+    _speedEnabled = enabled;
+    DrawSpeedSection();
     _display->display();
 }
 

@@ -111,6 +111,7 @@ public:
     static void SetFiles(const vector<string> &files);
     static void SetLoadEnabled(bool enabled);
     static void SetStopRunEnabled(bool enabled);
+    static void SetSpeedEnabled(bool enabled);
 
     static SpeedSetting GetSpeed();
 
