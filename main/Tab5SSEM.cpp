@@ -469,16 +469,18 @@ extern "C" void app_main(void)
                 _storeLines.SetDirty(false);
             }
 
-            const int64_t nowUs = esp_timer_get_time();
-            const bool updateDue = ((instructionCount - lastFooterUpdateCount) >= 1'000U) || ((nowUs - lastFooterUpdateUs) >= 1'000'000LL);
-            if (updateDue)
+            if ((instructionCount - lastFooterUpdateCount) >= 1000)
             {
-                struct timespec now;
-                clock_gettime(CLOCK_REALTIME, &now);
-                const double elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
-                Display::UpdateFooter(instructionCount, elapsed);
-                lastFooterUpdateCount = instructionCount;
-                lastFooterUpdateUs = nowUs;
+                const int64_t nowUs = esp_timer_get_time();
+                if ((nowUs - lastFooterUpdateUs) >= 1'000'000LL)
+                {
+                    struct timespec now;
+                    clock_gettime(CLOCK_REALTIME, &now);
+                    const double elapsed = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
+                    Display::UpdateFooter(instructionCount, elapsed);
+                    lastFooterUpdateCount = instructionCount;
+                    lastFooterUpdateUs = nowUs;
+                }
             }
         }
 
