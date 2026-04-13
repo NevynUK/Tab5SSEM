@@ -27,9 +27,11 @@ void Instructions::PopulateLookupTable()
     _instructions.push_back(Instruction("SKN", false, Instruction::HALT, "Skip the next instruction if the content of the Accumulator is negative"));
     _instructions.push_back(Instruction("STOP", false, Instruction::HALT, "Light the stop light and halt the machine"));
     _instructions.push_back(Instruction("HALT", true, Instruction::HALT, "Light the stop light and halt the machine"));
+    _instructions.push_back(Instruction("HLT", true, Instruction::HALT, "Light the stop light and halt the machine"));
     _instructions.push_back(Instruction("STP", false, Instruction::HALT, "Light the stop light and halt the machine"));
     _instructions.push_back(Instruction("NUM", true, Instruction::NUM, "Store a number"));
     _instructions.push_back(Instruction("BIN", true, Instruction::BIN, "Store a binary number"));
+    _instructions.push_back(Instruction("BNUM", true, Instruction::BIN, "Store a binary number"));
 }
 
 /**
@@ -71,7 +73,7 @@ const char *Instructions::Mnemonic(Instruction::opcodes_e opcode)
         }
     }
 
-    return (nullptr);
+    return ("NUM");
 }
 
 /**
