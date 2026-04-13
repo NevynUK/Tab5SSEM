@@ -8,15 +8,17 @@ The [Manchester Small Scale Experimental Machine (SSEM)](https://en.wikipedia.or
 
 A replica of the original Manchester Baby is currently on show in the [Museum of Science and Industry](http://www.msimanchester.org.uk/) in Castlefield, Manchester.
 
-![SSEM Replica at the Museum of Science and Industry, Manchester](Media/SSEMReplica.jpeg)
+![SSEM Replica at the Museum of Science and Industry, Manchester](Documentation/Media/SSEMReplica.jpeg)
 
-As you can see, it is a large machine weighing in at over 1 ton (that's imperial, not metric, hence the spelling).
+As you can see, it is a large machine weighing in at over 1 ton (that's imperial, not metric, hence the spelling).  An [overview of the architecture can be found here](Documentation/SSEMOverview.md).
 
 This repository contains a C++ emulator that will run on the [M5Stack Tab5](https://docs.m5stack.com/en/core/Tab5).  The emulator provides the following features:
 
 - Touch interface using the LCD on the Tab 5
 - Serial feedback over USB-C
 - Compiler and disassembler to read programs on the SD Card
+
+Applications are stored in text files on the SD Card.  A description of the [assembly language can be found here](Documentation/AssemblyLanguage.md).
 
 ## Running the Application
 
