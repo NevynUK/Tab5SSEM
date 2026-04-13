@@ -1,4 +1,4 @@
-# Small Scale Experimentation Machine (SSEM) - The Manchester Baby
+# Small Scale Experimental Machine (SSEM)
 
 [![Run code checks.](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml/badge.svg)](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml)
 
@@ -144,3 +144,4 @@ I (41835) Tab5SSEM:   31: 0x00000000 - 00000000000000000000000000000000 JMP 0   
 
 - Improve error handling (for instance, SSEM program compilation errors).
 - Code review
+- Check unit tests

@@ -6,6 +6,5 @@ idf_component_register(
         "Instructions.cpp"
         "Register.cpp"
         "StoreLines.cpp"
-        "UserInterface.cpp"
     INCLUDE_DIRS "."
 )
