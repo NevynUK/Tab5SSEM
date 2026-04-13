@@ -1,10 +1,24 @@
-# Tab5Template
+# Small Scale Experimentation Machine (SSEM) - The Manchester Baby
 
 [![Run code checks.](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml/badge.svg)](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml)
 
 [![Build](https://github.com/NevynUK/Tab5SSEM/actions/workflows/build.yml/badge.svg)](https://github.com/NevynUK/Tab5SSEM/actions/workflows/build.yml)
 
-Template application for the [M5Stack Tab5](https://docs.m5stack.com/en/core/Tab5) development platform.
+The [Manchester Small Scale Experimental Machine (SSEM)](https://en.wikipedia.org/wiki/Manchester_Small-Scale_Experimental_Machine) or Manchester Baby as it became known, was the first computer capable of executing a stored program. Baby was meant as a proving ground for the early computer technology having only 32 words of memory and a small instruction set.
+
+A replica of the original Manchester Baby is currently on show in the [Museum of Science and Industry](http://www.msimanchester.org.uk/) in Castlefield, Manchester.
+
+![SSEM Replica at the Museum of Science and Industry, Manchester](Documentation/Media/SSEMReplica.jpeg)
+
+As you can see, it is a large machine weighing in at over 1 ton (that's imperial, not metric, hence the spelling).  An [overview of the architecture can be found here](Documentation/SSEMOverview.md).
+
+This repository contains a C++ emulator that will run on the [M5Stack Tab5](https://docs.m5stack.com/en/core/Tab5).  The emulator provides the following features:
+
+- Touch interface using the LCD on the Tab 5
+- Serial feedback over USB-C
+- Compiler and disassembler to read programs on the SD Card
+
+Applications are stored in text files on the SD Card.  A description of the [assembly language can be found here](Documentation/AssemblyLanguage.md).
 
 ## Running the Application
 
@@ -12,17 +26,19 @@ The default application consists of a splash screen and a touch test application
 
 ### Splash Screen
 
-On startup the application displays the following splash screen:
+On startup the application displays a simple splash screen, tap on the splash screen to move on to the simulator.
 
-![Splash Screen](Documentation/Media/Tab5Ready.jpg)
+### User Interface
 
-Tap on the splash screen to move on to the touch screen test.
+![SSEM Simulator](Documentation/Media/HFR989Loaded.jpg)
 
-### Touch Screen Test
+The user interface has three main components:
 
-The screen will turn black after the splash screen has been dismissed.  Touch the screen and move your finger over the display.  The test application will follow your finger and display a trace of the path taken.  The screen coordinates will also be shown on the display.
+- Numbered store lines
+- Disassembled store lines
+- Control Panel
 
-![Splash Screen](Documentation/Media/Drawing.jpg)
+### Control Panel
 
 The control panel shows the state of the simulator as well as enabling the simulator to be controlled.
 
@@ -124,7 +140,7 @@ I (41835) Tab5SSEM:   30: 0x00000000 - 00000000000000000000000000000000 JMP 0   
 I (41835) Tab5SSEM:   31: 0x00000000 - 00000000000000000000000000000000 JMP 0            ; 0
 ```
 
-## To Do
+## To DO
 
+- Improve error handling (for instance, SSEM program compilation errors).
 - Code review
-- Add error handling
