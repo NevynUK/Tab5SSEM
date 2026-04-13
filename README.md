@@ -140,7 +140,7 @@ I (41835) Tab5SSEM:   30: 0x00000000 - 00000000000000000000000000000000 JMP 0   
 I (41835) Tab5SSEM:   31: 0x00000000 - 00000000000000000000000000000000 JMP 0            ; 0
 ```
 
-## To DO
+## To Do
 
 - Improve error handling (for instance, SSEM program compilation errors).
 - Code review
