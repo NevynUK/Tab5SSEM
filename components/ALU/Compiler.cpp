@@ -125,40 +125,51 @@ vector<Compiler::TokenisedLine *> *Compiler::Tokenise(const vector<string> &line
             }
 
             uint32_t storeLineNumber = GetStoreLineNumber(tokens[0]);
-            Instruction::opcodes_e opcode = Instructions::Opcode(tokens.size() > 1 ? tokens[1] : "");
-            uint32_t operand = 0;
-
-            switch (opcode)
+            if (tokens.size() > 1)
             {
-                case Instruction::JMP:
-                case Instruction::JPR:
-                case Instruction::LDN:
-                case Instruction::STO:
-                case Instruction::SUB:
-                case Instruction::NUM:
-                    operand = GetOperand(tokens.size() > 2 ? tokens[2] : "");
-                    break;
-                case Instruction::BIN:
-                    operand = GetBinary(tokens.size() > 2 ? tokens[2] : "");
-                    break;
-                default:
-                    if (tokens.size() > 3)
+                Instruction::opcodes_e opcode = Instructions::Opcode(tokens[1]);
+                uint32_t operand = 0;
+
+                switch (opcode)
+                {
+                    case Instruction::JMP:
+                    case Instruction::JPR:
+                    case Instruction::LDN:
+                    case Instruction::STO:
+                    case Instruction::SUB:
+                    case Instruction::NUM:
+                        operand = GetOperand(tokens.size() > 2 ? tokens[2] : "");
+                        break;
+                    case Instruction::BIN:
+                        operand = GetBinary(tokens.size() > 2 ? tokens[2] : "");
+                        break;
+                    case Instruction::UNKNOWN:
+                        throw runtime_error("Unknown opcode: " + tokens[1]);
+                    default:
+                        if (tokens.size() > 3)
+                        {
+                            if (!IsComment(tokens[3]))
+                            {
+                                throw runtime_error("Unexpected operand");
+                            }
+                        }
+                        break;
+                }
+
+                if (tokens.size() > 3)
+                {
+                    if (!IsComment(tokens[3]))
                     {
-                        throw runtime_error("Unexpected operand");
+                        throw runtime_error("Unexpected text");
                     }
-                    break;
-            }
+                }
 
-            if (tokens.size() > 3)
-            {
-                throw runtime_error("Unexpected text");
+                TokenisedLine *tokenisedLine = new TokenisedLine();
+                tokenisedLine->storeLineNumber = storeLineNumber;
+                tokenisedLine->opcode = opcode;
+                tokenisedLine->operand = operand;
+                result->push_back(tokenisedLine);
             }
-
-            TokenisedLine *tokenisedLine = new TokenisedLine();
-            tokenisedLine->storeLineNumber = storeLineNumber;
-            tokenisedLine->opcode = opcode;
-            tokenisedLine->operand = operand;
-            result->push_back(tokenisedLine);
         }
     }
     catch (const std::exception &e)
@@ -248,7 +259,7 @@ uint32_t Compiler::GetBinary(const string &line)
  */
 bool Compiler::IsComment(const string &line)
 {
-    return (!line.empty() && ((line[0] == ';') || (line.size() >= 3 && line.compare(0, 3, "---") == 0)));
+    return (!line.empty() && ((line[0] == ';') || (line.size() >= 2 && line.compare(0, 2, "--") == 0)));
 }
 
 /**
