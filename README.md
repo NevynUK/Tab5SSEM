@@ -144,3 +144,4 @@ I (41835) Tab5SSEM:   31: 0x00000000 - 00000000000000000000000000000000 JMP 0   
 
 - Improve error handling (for instance, SSEM program compilation errors).
 - Code review
+- Check unit tests
