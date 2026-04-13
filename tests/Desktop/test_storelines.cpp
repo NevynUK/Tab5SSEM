@@ -2,7 +2,7 @@
 
 /**
  * @brief Test the creation of a StoreLines object.
- * 
+ *
  * @return true If the tests pass.
  * @return false If the tests fail.
  */
@@ -34,12 +34,12 @@ bool TestStoreLineCreation()
         result = false;
     }
 
-    return(result);
+    return (result);
 }
 
 /**
  * @brief Test accessing elements in the store lines.
- * 
+ *
  * @return true If the tests pass.
  * @return false If the tests fail.
  */
@@ -85,12 +85,12 @@ bool TestStoreLinesAccess()
         result = false;
     }
 
-    return(result);
+    return (result);
 }
 
 /**
  * @brief Test the StoreLines object.
- * 
+ *
  * @return true StoreLines tests pass.
  * @return false StoreLines tests fail.
  */
@@ -101,5 +101,5 @@ bool TestStoreLines()
     result &= TestStoreLineCreation();
     result &= TestStoreLinesAccess();
 
-    return(result);
+    return (result);
 }

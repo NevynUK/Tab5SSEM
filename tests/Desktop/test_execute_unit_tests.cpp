@@ -27,7 +27,7 @@ extern "C" bool execute_unit_tests()
     bool result = true;
 
     Instructions::PopulateLookupTable();
-    
+
     result &= TestInstructions();
     PrintPassOrFail("Instructions", result);
     result &= TestRegister();
@@ -39,5 +39,5 @@ extern "C" bool execute_unit_tests()
     result &= TestCompiler();
     PrintPassOrFail("Compiler", result);
 
-    return(result);
+    return (result);
 }

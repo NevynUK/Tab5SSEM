@@ -7,7 +7,7 @@ using namespace std;
 
 /**
  * @brief Test that a valid mnemonic generates the expected opcode.
- * 
+ *
  * @param mnemonic Mnemonic to look up.
  * @param expected_opcode Opcode that we expect to be returned.
  * @return true Expected opcode returned.
@@ -23,12 +23,12 @@ bool TestMnemonic(const string &mnemonic, int8_t expected_opcode)
         cout << "Invalid opcode for " << mnemonic << ", expected " << expected_opcode << ", received " << code << endl;
         result = false;
     }
-    return(result);
+    return (result);
 }
 
 /**
  * @brief Test that we can translate an opcode into the preferred mnemonic for the instruction.
- * 
+ *
  * @param expected_mnemonic Mnemonic returned (this should be the preferred mnemonic).
  * @param opcode Opcode to lookup
  * @return true Expected mnemonic returned.
@@ -44,12 +44,12 @@ bool TestOpcode(const string &expected_mnemonic, Instruction::opcodes_e opcode)
         cout << "Invalid mnemonic for " << opcode << ", expected " << expected_mnemonic << ", received " << mn << endl;
         result = false;
     }
-    return(result);
+    return (result);
 }
 
 /**
  * @brief Test the Instructions object.
- * 
+ *
  * @return true When all of the tests pass.
  * @return false Fail if any of the tests fail.
  */
@@ -79,7 +79,7 @@ bool TestInstructions()
     //  Now test for an invalid mnemonic.
     //
     result &= (Instructions::Opcode("InvalidMnemonic") == Instruction::UNKNOWN);
-    
+
     //
     //  Now get the preferred mnemonics for the opcodes.
     //
@@ -95,6 +95,5 @@ bool TestInstructions()
     //
     result &= (Instructions::Mnemonic((Instruction::opcodes_e) 0x50) == nullptr);
 
-    return(result);
+    return (result);
 }
-
