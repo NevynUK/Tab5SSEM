@@ -1,4 +1,4 @@
-# Small Scale Experimentation Machine (SSEM) - The Manchester Baby
+# Small Scale Experimental Machine (SSEM)
 
 [![Run code checks.](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml/badge.svg)](https://github.com/NevynUK/Tab5SSEM/actions/workflows/run-code-checks.yml)
 
