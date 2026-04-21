@@ -104,6 +104,23 @@ Display::StopRunCallback Display::_stopRunCallback = nullptr;
 Display::LoadCallback Display::_loadCallback = nullptr;
 
 /**
+ * @brief Set to true by OnMessageDialogTouch when the OK button is pressed.
+ */
+volatile bool Display::_messageDialogDismissed = false;
+
+/**
+ * @brief Previous touch active state used for press-edge detection in the
+ *        message dialog touch handler.
+ */
+volatile bool Display::_messageDialogPrevTouched = false;
+
+/**
+ * @brief true while the message dialog is being displayed; suppresses
+ *        storeline redraws from the DisplayTask.
+ */
+volatile bool Display::_messageDialogActive = false;
+
+/**
  * @brief Name of the currently loaded program; empty when none is loaded.
  */
 string Display::_loadedProgram;
@@ -806,6 +823,215 @@ string Display::Basename(const string &path)
     return (pos != string::npos) ? path.substr(pos + 1) : path;
 }
 
+// ---------------------------------------------------------------------------
+// Error dialog
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Draws the message dialog overlay onto the current screen contents.
+ *
+ * Renders a rounded-corner popup with a white border and black fill.
+ * The title is drawn in bold white at the top, separated from the body
+ * by a horizontal rule.  The message is drawn centred in white below
+ * the rule; newline characters produce additional lines.  An OK
+ * rounded-rectangle button is drawn at the bottom of the dialog.
+ *
+ * Must be called while _displayMutex is held and inside a
+ * startWrite / endWrite pair.
+ *
+ * @param title    Null-terminated title string.
+ * @param message  Null-terminated message body; may contain '\n'.
+ */
+void Display::DrawMessageDialog(const char *title, const char *message)
+{
+    const int centreX = DIALOG_X + DIALOG_WIDTH / 2;
+
+    // White border
+    _display->fillRoundRect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT, DIALOG_CORNER_RADIUS, TFT_WHITE);
+    // Black fill inside border
+    _display->fillRoundRect(DIALOG_X + 2, DIALOG_Y + 2, DIALOG_WIDTH - 4, DIALOG_HEIGHT - 4, DIALOG_CORNER_RADIUS - 1, TFT_BLACK);
+
+    // Title in bold white, centred horizontally, vertically centred in the
+    // title band.  Bold is simulated by drawing the string twice: once at
+    // the nominal position and once shifted one pixel to the right.
+    const int titleY = DIALOG_Y + DIALOG_TITLE_HEIGHT / 2;
+    _display->setFont(&fonts::Font4);
+    _display->setTextColor(TFT_WHITE, TFT_BLACK);
+    _display->setTextDatum(textdatum_t::middle_center);
+    _display->drawString(title, centreX,     titleY);
+    _display->drawString(title, centreX + 1, titleY);  // second pass for bold effect
+
+    // Horizontal rule separating title from body
+    _display->drawFastHLine(DIALOG_X + 2, DIALOG_Y + DIALOG_TITLE_HEIGHT, DIALOG_WIDTH - 4, TFT_WHITE);
+
+    // Message body — split on '\n' and draw each line centred
+    _display->setFont(&fonts::Font4);
+    _display->setTextColor(TFT_WHITE, TFT_BLACK);
+    _display->setTextDatum(textdatum_t::middle_center);
+
+    const int messageAreaTop    = DIALOG_Y + DIALOG_TITLE_HEIGHT + 4;
+    const int messageAreaBottom = DIALOG_OK_BUTTON_Y - 4;
+    const int messageAreaHeight = messageAreaBottom - messageAreaTop;
+    constexpr int LINE_HEIGHT   = 20;
+
+    // Collect lines
+    const string messageStr(message != nullptr ? message : "");
+    vector<string> lines;
+    size_t lineStart = 0;
+
+    while (true)
+    {
+        const size_t newline = messageStr.find('\n', lineStart);
+        if (newline == string::npos)
+        {
+            lines.push_back(messageStr.substr(lineStart));
+            break;
+        }
+        lines.push_back(messageStr.substr(lineStart, newline - lineStart));
+        lineStart = newline + 1;
+    }
+
+    // Vertically centre the block of lines within the message area
+    const int totalTextHeight = static_cast<int>(lines.size()) * LINE_HEIGHT;
+    int lineY = messageAreaTop + (messageAreaHeight - totalTextHeight) / 2 + LINE_HEIGHT / 2;
+
+    for (const string &line : lines)
+    {
+        _display->drawString(line.c_str(), centreX, lineY);
+        lineY += LINE_HEIGHT;
+    }
+
+    // OK button — white border, black fill, white label
+    _display->fillRoundRect(DIALOG_OK_BUTTON_X, DIALOG_OK_BUTTON_Y, DIALOG_BUTTON_WIDTH, DIALOG_BUTTON_HEIGHT, CORNER_RADIUS, TFT_BLACK);
+    _display->drawRoundRect(DIALOG_OK_BUTTON_X, DIALOG_OK_BUTTON_Y, DIALOG_BUTTON_WIDTH, DIALOG_BUTTON_HEIGHT, CORNER_RADIUS, TFT_WHITE);
+
+    _display->setFont(&fonts::Font4);
+    _display->setTextColor(TFT_WHITE, TFT_BLACK);
+    _display->setTextDatum(textdatum_t::middle_center);
+    _display->drawString("OK", DIALOG_OK_BUTTON_X + DIALOG_BUTTON_WIDTH / 2, DIALOG_OK_BUTTON_Y + DIALOG_BUTTON_HEIGHT / 2);
+}
+
+/**
+ * @brief Displays a modal message dialog without blocking the calling task.
+ *
+ * Draws a popup with a bold-white title, a white message body, and a
+ * rounded OK button.  Touch input is routed exclusively to the dialog
+ * while it is visible.  A short-lived FreeRTOS task (MessageDialogTask)
+ * is spawned to poll for dismissal and restore the main interface; this
+ * avoids blocking the calling task, which may be TouchTask itself.
+ *
+ * @param title    Title text (mandatory; must not be nullptr or empty).
+ * @param message  Message body.  May contain '\n' for line breaks.
+ */
+void Display::ShowMessageDialog(const char *title, const char *message)
+{
+    const char *resolvedMessage = (message != nullptr) ? message : "";
+
+    // Draw the dialog over the current screen contents
+    {
+        const MutexGuard guard(_displayMutex);
+        _messageDialogActive = true;
+        _display->startWrite();
+        DrawMessageDialog(title, resolvedMessage);
+        _display->endWrite();
+        _display->display();
+    }
+
+    // Transfer touch routing exclusively to the dialog handler before
+    // spawning the dismissal task, so that no panel events are processed
+    // between the dialog appearing and the dismissal task starting.
+    TouchInput::GetInstance()->RemoveCallback(OnPanelTouch);
+    _messageDialogDismissed   = false;
+    _messageDialogPrevTouched = false;
+    TouchInput::GetInstance()->AddCallback(OnMessageDialogTouch);
+
+    // Spawn a short-lived task to poll for dismissal and restore the UI.
+    // This avoids blocking the calling task (which may be TouchTask itself,
+    // making a blocking poll here a deadlock).
+    xTaskCreate(MessageDialogTask, "MsgDialogTask", 4096, nullptr, 5, nullptr);
+}
+
+/**
+ * @brief Short-lived FreeRTOS task that waits for the message dialog to be
+ *        dismissed and then restores the main interface.
+ *
+ * Polls _messageDialogDismissed every 50 ms.  When the flag is set by
+ * OnMessageDialogTouch, removes the dialog touch callback, redraws the
+ * full main interface, re-registers OnPanelTouch, and deletes itself.
+ *
+ * Running the blocking wait in a dedicated task prevents deadlocking
+ * when ShowMessageDialog is called from within a touch callback.
+ *
+ * @param parameter  Unused; required by the FreeRTOS task signature.
+ */
+void Display::MessageDialogTask(void *parameter)
+{
+    (void) parameter;
+
+    // Poll until the OK button has been pressed
+    while (!_messageDialogDismissed)
+    {
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    TouchInput::GetInstance()->RemoveCallback(OnMessageDialogTouch);
+
+    // Redraw the full main interface
+    {
+        const MutexGuard guard(_displayMutex);
+        _messageDialogActive = false;
+
+        _display->startWrite();
+        _display->fillScreen(TFT_BLACK);
+        _display->endWrite();
+
+        // Force all storelines to redraw: the DisplayTask may have updated
+        // _store and _labels while the dialog suppressed draws, so _changed[]
+        // may be stale (all-false) even though the content has changed.
+        for (int i = 0; i < STORELINE_COUNT; ++i)
+        {
+            _changed[i] = true;
+        }
+
+        DrawHeader();
+        DrawFooter();
+        DrawAllStorelines();
+        DrawControlPanel();
+        _display->display();
+    }
+
+    // Prevent the finger-lift from the OK button triggering a spurious press
+    _prevTouched = true;
+    TouchInput::GetInstance()->AddCallback(OnPanelTouch);
+
+    vTaskDelete(nullptr);
+}
+
+/**
+ * @brief Touch callback active while the message dialog is displayed.
+ *
+ * Detects a press on the OK button using edge-detection (transition from
+ * no touch to touch).  Sets _messageDialogDismissed when the touch
+ * co-ordinates fall within the OK button hit area.
+ *
+ * @param points  Array of screen-space touch co-ordinates.
+ * @param count   Number of active touch points; zero when all lifted.
+ */
+void Display::OnMessageDialogTouch(const lgfx::touch_point_t *points, int count)
+{
+    const bool touched = (count > 0);
+
+    if (touched && !_messageDialogPrevTouched)
+    {
+        if (Display::HitTest(points[0].x, points[0].y, DIALOG_OK_BUTTON_X, DIALOG_OK_BUTTON_Y, DIALOG_BUTTON_WIDTH, DIALOG_BUTTON_HEIGHT))
+        {
+            _messageDialogDismissed = true;
+        }
+    }
+
+    _messageDialogPrevTouched = touched;
+}
+
 /**
  * @brief Touch callback active during the splash screen.
  *
@@ -1051,6 +1277,8 @@ void Display::DisplayTask(void *parameter)
         {
             const MutexGuard guard(_displayMutex);
 
+            // Always apply state updates so _store, _labels, and _changed
+            // remain current even when the message dialog is covering the screen.
             for (int i = 0; i < STORELINE_COUNT; ++i)
             {
                 if (_store[i] != message.storelineValues[i])
@@ -1065,11 +1293,21 @@ void Display::DisplayTask(void *parameter)
                 }
             }
 
+            if (message.enableStopRun)
+            {
+                _stopRunEnabled = true;
+            }
+
+            // Skip drawing while the message dialog is covering the screen.
+            if (_messageDialogActive)
+            {
+                continue;
+            }
+
             DrawAllStorelines();
 
             if (message.enableStopRun)
             {
-                _stopRunEnabled = true;
                 DrawActionButtons();
             }
 

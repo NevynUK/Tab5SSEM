@@ -400,6 +400,9 @@ void OnStopRunPressed(bool running)
     }
 }
 
+static char _messageBoxTitle[64] = {};
+static char _messageBoxMessage[256] = {};
+
 /**
  * @brief Main program loop.
  */
@@ -491,6 +494,9 @@ extern "C" void app_main(void)
         ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
         ESP_LOGI(LOG_TAG, "CPU execution stopped after %s instructions.", Utility::FormatWithCommas(instructionCount).c_str());
         Display::UpdateFooter(instructionCount, elapsedTime);
+        snprintf(_messageBoxTitle, sizeof(_messageBoxTitle), "Execution Complete");
+        snprintf(_messageBoxMessage, sizeof(_messageBoxMessage), "CPU execution stopped after %s instructions.\n\nElapsed time: %.2f seconds.", Utility::FormatWithCommas(instructionCount).c_str(), elapsedTime);
+        Display::ShowMessageDialog(_messageBoxTitle, _messageBoxMessage);
         UpdateDisplayTube(_storeLines);
 
         Display::SetRunning(false);
