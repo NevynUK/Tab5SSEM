@@ -278,3 +278,67 @@ This button is only enabled when a file has been selected.
 The button will raise a callback.
 
 An API allows the state to be changed.
+
+---
+
+## Message Dialog
+
+A modal message dialog can be displayed over the current screen contents at any time by calling:
+
+```cpp
+Display::ShowMessageDialog(const char *title, const char *message);
+```
+
+### Appearance
+
+The dialog is a centred 600 × 300 pixel rounded-rectangle popup (corner radius 16 pixels) drawn over the existing screen contents.
+
+| Layer | Description |
+|---|---|
+| Outer border | White, 2 pixels |
+| Inner fill | Black |
+
+From top to bottom the dialog contains three elements:
+
+#### Title
+
+- Drawn in bold white using `fonts::Font4`.
+- Centred horizontally within the dialog.
+- Vertically centred within a 56-pixel title band at the top of the dialog.
+- The bold effect is achieved by rendering the string twice: once at the nominal position and once shifted one pixel to the right.
+- A white horizontal rule separates the title band from the message body.
+- The `title` parameter is mandatory and must not be `nullptr` or empty.
+
+#### Message body
+
+- Drawn in white using `fonts::Font4`.
+- Centred horizontally within the dialog.
+- The text block is vertically centred in the area between the horizontal rule and the OK button.
+- Multi-line messages are supported using `\n` as the line separator.  Each line is drawn individually at 20-pixel line spacing.
+
+#### OK button
+
+- A rounded-rectangle button (160 × 44 pixels, corner radius 8 pixels) centred horizontally at the bottom of the dialog, 20 pixels above the dialog's lower edge.
+- White border, black fill, white label text ("OK").
+
+### Behaviour
+
+1. `ShowMessageDialog` draws the dialog immediately, then returns to the caller without blocking.
+2. A short-lived FreeRTOS task (`MsgDialogTask`, stack 4096 bytes, priority 5) is spawned to wait for dismissal.
+3. The normal panel touch callback (`OnPanelTouch`) is unregistered for the duration; touch events are routed exclusively to the dialog's own handler (`OnMessageDialogTouch`).
+4. `DisplayTask` continues to receive and apply queued `DisplayMessage` state updates while the dialog is visible, but suppresses all draw calls until the dialog is dismissed.
+5. When the user taps the OK button, `MsgDialogTask` redraws the full main interface (clearing the dialog) and re-registers `OnPanelTouch`.  All 32 storeline dirty flags are forced to `true` before `DrawAllStorelines()` to guarantee a full repaint.
+6. `_prevTouched` is set to `true` before re-registering `OnPanelTouch` to prevent the finger-lift from the OK button generating a spurious panel press.
+
+### Thread safety
+
+`ShowMessageDialog` may be called from any task context, including from within a touch callback (e.g. the `LoadCallback` invoked by `TouchTask`).  The non-blocking spawn pattern avoids the deadlock that would result from a blocking wait inside `TouchTask`.
+
+All draw calls inside `ShowMessageDialog` and `MsgDialogTask` are serialised by `_displayMutex`.
+
+### Example usage
+
+```cpp
+Display::ShowMessageDialog("Load Error", "File not found:\n/sdcard/missing.ssem");
+Display::ShowMessageDialog("Information", "Program loaded successfully.");
+```

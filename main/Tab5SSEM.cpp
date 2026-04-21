@@ -400,7 +400,14 @@ void OnStopRunPressed(bool running)
     }
 }
 
+/**
+ * @brief Title for the message box.
+ */
 static char _messageBoxTitle[64] = {};
+
+/**
+ * @brief Message body for the message box.
+ */
 static char _messageBoxMessage[256] = {};
 
 /**
