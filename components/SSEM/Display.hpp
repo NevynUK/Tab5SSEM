@@ -119,6 +119,8 @@ public:
     static void SetStopRunCallback(StopRunCallback callback);
     static void SetLoadCallback(LoadCallback callback);
 
+    static void ShowMessageDialog(const char *title, const char *message);
+
 private:
     Display() = delete;
 
@@ -393,4 +395,51 @@ private:
     static SemaphoreHandle_t _displayMutex;
 
     static void DisplayTask(void *parameter);
+
+    // Message dialog drawing and touch handling
+    static void DrawMessageDialog(const char *title, const char *message);
+    static void OnMessageDialogTouch(const lgfx::touch_point_t *points, int count);
+    static void MessageDialogTask(void *parameter);
+
+    /**
+     * @brief Set to true by OnMessageDialogTouch when the OK button is pressed.
+     */
+    static volatile bool _messageDialogDismissed;
+
+    /**
+     * @brief Previous touch active state used for press-edge detection inside
+     *        the message dialog touch handler.
+     */
+    static volatile bool _messageDialogPrevTouched;
+
+    /**
+     * @brief true while the message dialog is being displayed.
+     *
+     * Checked by DisplayTask to suppress storeline redraws that would paint
+     * over the dialog.
+     */
+    static volatile bool _messageDialogActive;
+
+    // Message dialog layout constants
+    static constexpr int DIALOG_WIDTH = 600;
+    static constexpr int DIALOG_HEIGHT = 300;
+    static constexpr int DIALOG_X = (DISPLAY_WIDTH - DIALOG_WIDTH) / 2;
+    static constexpr int DIALOG_Y = (DISPLAY_HEIGHT - DIALOG_HEIGHT) / 2;
+    static constexpr int DIALOG_CORNER_RADIUS = 16;
+    static constexpr int DIALOG_PADDING = 20;
+    static constexpr int DIALOG_TITLE_HEIGHT = 56;
+    static constexpr int DIALOG_BUTTON_HEIGHT = 44;
+    static constexpr int DIALOG_BUTTON_WIDTH = 160;
+
+    /**
+     * @brief X co-ordinate of the left edge of the OK button, centred
+     *        horizontally inside the dialog.
+     */
+    static constexpr int DIALOG_OK_BUTTON_X = DIALOG_X + (DIALOG_WIDTH - DIALOG_BUTTON_WIDTH) / 2;
+
+    /**
+     * @brief Y co-ordinate of the top edge of the OK button, positioned
+     *        DIALOG_PADDING pixels above the bottom of the dialog.
+     */
+    static constexpr int DIALOG_OK_BUTTON_Y = DIALOG_Y + DIALOG_HEIGHT - DIALOG_PADDING - DIALOG_BUTTON_HEIGHT;
 };

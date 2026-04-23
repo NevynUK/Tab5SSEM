@@ -401,6 +401,16 @@ void OnStopRunPressed(bool running)
 }
 
 /**
+ * @brief Title for the message box.
+ */
+static char _messageBoxTitle[64] = {};
+
+/**
+ * @brief Message body for the message box.
+ */
+static char _messageBoxMessage[256] = {};
+
+/**
  * @brief Main program loop.
  */
 extern "C" void app_main(void)
@@ -489,9 +499,14 @@ extern "C" void app_main(void)
         clock_gettime(CLOCK_REALTIME, &end);
         double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         ESP_LOGI(LOG_TAG, "Program execution completed, Elapsed time=%.2f seconds", elapsedTime);
-        ESP_LOGI(LOG_TAG, "CPU execution stopped after %s instructions.", Utility::FormatWithCommas(instructionCount).c_str());
+        ESP_LOGI(LOG_TAG, "CPU executed %s instructions.", Utility::FormatWithCommas(instructionCount).c_str());
+
         Display::UpdateFooter(instructionCount, elapsedTime);
         UpdateDisplayTube(_storeLines);
+
+        snprintf(_messageBoxTitle, sizeof(_messageBoxTitle), "Execution Complete");
+        snprintf(_messageBoxMessage, sizeof(_messageBoxMessage), "CPU executed %s instructions.\n\nElapsed time: %.2f seconds.", Utility::FormatWithCommas(instructionCount).c_str(), elapsedTime);
+        Display::ShowMessageDialog(_messageBoxTitle, _messageBoxMessage);
 
         Display::SetRunning(false);
         Display::SetSpeedEnabled(true);
