@@ -80,5 +80,98 @@ bool TestRegister()
         return (false);
     }
 
+    // Additional ALU arithmetic tests: positive, negative, zero
+    Register regPos(5);
+    regPos.Add(3);
+    if (regPos.GetValue() != 8)
+    {
+        printf("ALU Add failed for positive values.\n");
+        return (false);
+    }
+    regPos.Subtract(Register(2));
+    if (regPos.GetValue() != 6)
+    {
+        printf("ALU Subtract failed for positive values.\n");
+        return (false);
+    }
+    regPos.Negate();
+    if (regPos.GetValue() != -6)
+    {
+        printf("ALU Negate failed for positive value.\n");
+        return (false);
+    }
+
+    Register regNeg(-7);
+    regNeg.Add(-3);
+    if (regNeg.GetValue() != -10)
+    {
+        printf("ALU Add failed for negative values.\n");
+        return (false);
+    }
+    regNeg.Subtract(Register(5));
+    if (regNeg.GetValue() != -15)
+    {
+        printf("ALU Subtract failed for negative values.\n");
+        return (false);
+    }
+    regNeg.Negate();
+    if (regNeg.GetValue() != 15)
+    {
+        printf("ALU Negate failed for negative value.\n");
+        return (false);
+    }
+
+    Register regZero(0);
+    regZero.Add(0);
+    if (regZero.GetValue() != 0)
+    {
+        printf("ALU Add failed for zero.\n");
+        return (false);
+    }
+    regZero.Subtract(Register(0));
+    if (regZero.GetValue() != 0)
+    {
+        printf("ALU Subtract failed for zero.\n");
+        return (false);
+    }
+    regZero.Negate();
+    if (regZero.GetValue() != 0)
+    {
+        printf("ALU Negate failed for zero.\n");
+        return (false);
+    }
+
+    // ALU bitwise operation tests
+    Register regBit(0x80000001); // 1000...0001
+    int32_t reversed = regBit.ReverseBits();
+    if (reversed != 0x80000001)
+    {
+        printf("ALU ReverseBits failed for 0x80000001.\n");
+        return (false);
+    }
+    Register regBit2(0xF0F0F0F0);
+    int32_t reversed2 = regBit2.ReverseBits();
+    if (reversed2 != 0x0F0F0F0F)
+    {
+        printf("ALU ReverseBits failed for 0xF0F0F0F0.\n");
+        return (false);
+    }
+    string binStr = regBit2.Binary();
+    if (binStr != "00001111000011110000111100001111")
+    {
+        printf("ALU Binary failed for 0xF0F0F0F0, got '%s'.\n", binStr.c_str());
+        return (false);
+    }
+    Register regZeroBit(0);
+    if (regZeroBit.ReverseBits() != 0)
+    {
+        printf("ALU ReverseBits failed for zero.\n");
+        return (false);
+    }
+    if (regZeroBit.Binary() != string(32, '0'))
+    {
+        printf("ALU Binary failed for zero.\n");
+        return (false);
+    }
     return (true);
 }
