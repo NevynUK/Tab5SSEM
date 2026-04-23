@@ -858,8 +858,8 @@ void Display::DrawMessageDialog(const char *title, const char *message)
     _display->setFont(&fonts::Font4);
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_center);
-    _display->drawString(title, centreX,     titleY);
-    _display->drawString(title, centreX + 1, titleY);  // second pass for bold effect
+    _display->drawString(title, centreX, titleY);
+    _display->drawString(title, centreX + 1, titleY); // second pass for bold effect
 
     // Horizontal rule separating title from body
     _display->drawFastHLine(DIALOG_X + 2, DIALOG_Y + DIALOG_TITLE_HEIGHT, DIALOG_WIDTH - 4, TFT_WHITE);
@@ -869,10 +869,10 @@ void Display::DrawMessageDialog(const char *title, const char *message)
     _display->setTextColor(TFT_WHITE, TFT_BLACK);
     _display->setTextDatum(textdatum_t::middle_center);
 
-    const int messageAreaTop    = DIALOG_Y + DIALOG_TITLE_HEIGHT + 4;
+    const int messageAreaTop = DIALOG_Y + DIALOG_TITLE_HEIGHT + 4;
     const int messageAreaBottom = DIALOG_OK_BUTTON_Y - 4;
     const int messageAreaHeight = messageAreaBottom - messageAreaTop;
-    constexpr int LINE_HEIGHT   = 20;
+    constexpr int LINE_HEIGHT = 20;
 
     // Collect lines
     const string messageStr(message != nullptr ? message : "");
@@ -895,7 +895,7 @@ void Display::DrawMessageDialog(const char *title, const char *message)
     const int totalTextHeight = static_cast<int>(lines.size()) * LINE_HEIGHT;
     int lineY = messageAreaTop + (messageAreaHeight - totalTextHeight) / 2 + LINE_HEIGHT / 2;
 
-    for (const string &line : lines)
+    for (const string &line: lines)
     {
         _display->drawString(line.c_str(), centreX, lineY);
         lineY += LINE_HEIGHT;
@@ -941,7 +941,7 @@ void Display::ShowMessageDialog(const char *title, const char *message)
     // spawning the dismissal task, so that no panel events are processed
     // between the dialog appearing and the dismissal task starting.
     TouchInput::GetInstance()->RemoveCallback(OnPanelTouch);
-    _messageDialogDismissed   = false;
+    _messageDialogDismissed = false;
     _messageDialogPrevTouched = false;
     TouchInput::GetInstance()->AddCallback(OnMessageDialogTouch);
 

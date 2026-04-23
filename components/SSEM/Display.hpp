@@ -421,15 +421,15 @@ private:
     static volatile bool _messageDialogActive;
 
     // Message dialog layout constants
-    static constexpr int DIALOG_WIDTH         = 600;
-    static constexpr int DIALOG_HEIGHT        = 300;
-    static constexpr int DIALOG_X             = (DISPLAY_WIDTH - DIALOG_WIDTH) / 2;
-    static constexpr int DIALOG_Y             = (DISPLAY_HEIGHT - DIALOG_HEIGHT) / 2;
+    static constexpr int DIALOG_WIDTH = 600;
+    static constexpr int DIALOG_HEIGHT = 300;
+    static constexpr int DIALOG_X = (DISPLAY_WIDTH - DIALOG_WIDTH) / 2;
+    static constexpr int DIALOG_Y = (DISPLAY_HEIGHT - DIALOG_HEIGHT) / 2;
     static constexpr int DIALOG_CORNER_RADIUS = 16;
-    static constexpr int DIALOG_PADDING       = 20;
-    static constexpr int DIALOG_TITLE_HEIGHT  = 56;
+    static constexpr int DIALOG_PADDING = 20;
+    static constexpr int DIALOG_TITLE_HEIGHT = 56;
     static constexpr int DIALOG_BUTTON_HEIGHT = 44;
-    static constexpr int DIALOG_BUTTON_WIDTH  = 160;
+    static constexpr int DIALOG_BUTTON_WIDTH = 160;
 
     /**
      * @brief X co-ordinate of the left edge of the OK button, centred
@@ -443,4 +443,3 @@ private:
      */
     static constexpr int DIALOG_OK_BUTTON_Y = DIALOG_Y + DIALOG_HEIGHT - DIALOG_PADDING - DIALOG_BUTTON_HEIGHT;
 };
-
